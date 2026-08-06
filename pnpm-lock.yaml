@@ -91,6 +91,9 @@ importers:
       eslint:
         specifier: ^9.39.4
         version: 9.39.5(jiti@2.7.0)
+      nitro-cloudflare-dev:
+        specifier: ^0.2.2
+        version: 0.2.2
       tailwindcss:
         specifier: ^4.1.10
         version: 4.3.3
@@ -100,6 +103,9 @@ importers:
       vue-tsc:
         specifier: ^3.3.9
         version: 3.3.9(typescript@5.9.3)
+      wrangler:
+        specifier: ^4.119.0
+        version: 4.119.0(@cloudflare/workers-types@5.20260804.1)
 
   packages/types:
     dependencies:
@@ -3829,6 +3835,9 @@ packages:
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
+
+  nitro-cloudflare-dev@0.2.2:
+    resolution: {integrity: sha512-aZfNTVdgXPQeAmXW0Tw8hm3usAHr4qVG4Bg3WhHBGeZYuXr9OyT04Ztb+STkMzhyaXvfMHViAaPUPg06iAYqag==}
 
   nitropack@2.13.4:
     resolution: {integrity: sha512-tX7bT6zxNeMwkc6hxHiZeUoTOjVrcjoh1Z3cmxOlodIqjl4HISgqfGOmkWSayky3Nv9Z5+KQH52F8nmXJY5AAA==}
@@ -8897,6 +8906,12 @@ snapshots:
   napi-postinstall@0.3.4: {}
 
   natural-compare@1.4.0: {}
+
+  nitro-cloudflare-dev@0.2.2:
+    dependencies:
+      consola: 3.4.2
+      mlly: 1.8.2
+      pkg-types: 2.3.1
 
   nitropack@2.13.4(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260804.1))(rolldown@1.2.3)(srvx@0.11.22)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.9)(yaml@2.9.0)):
     dependencies:

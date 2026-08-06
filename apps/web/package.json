@@ -29,8 +29,10 @@
     "@cloudflare/workers-types": "^5.20260804.1",
     "@tailwindcss/vite": "^4.1.10",
     "eslint": "^9.39.4",
+    "nitro-cloudflare-dev": "^0.2.2",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.7.2",
-    "vue-tsc": "^3.3.9"
+    "vue-tsc": "^3.3.9",
+    "wrangler": "^4.119.0"
   }
 }
