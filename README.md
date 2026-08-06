@@ -3,12 +3,10 @@
 Wedding Invitation & Client Management System for a wedding photography company.
 
 - **Web app** (Nuxt 4 + Tailwind) hosted on Cloudflare Pages
-- **API** (Hono + Drizzle) on Cloudflare Workers
+- **API** (Nuxt server routes) inside the same Pages/Worker deployment
 - **Database** Cloudflare D1 (SQLite)
-- **Object storage** Cloudflare R2 for images and generated OG images
-- **Rate limiting** Cloudflare KV
 
-Everything runs inside the Cloudflare edge.
+Everything runs inside the Cloudflare edge as a single deployment.
 
 ## Documentation
 
@@ -26,10 +24,8 @@ pnpm install
 # Generate migrations
 pnpm db:generate
 
-# Start the API worker (http://localhost:8787)
-pnpm dev:api
-
-# In a new terminal, start the Nuxt app (http://localhost:3000)
+# Start the Nuxt dev server (http://localhost:3000)
+# This also exposes Cloudflare bindings via nitro-cloudflare-dev
 pnpm dev:web
 ```
 
@@ -65,27 +61,24 @@ The picker, preview, public page and OG renderer will pick it up automatically.
 
 ## Public OG images
 
-Publish stores a versioned absolute OG URL and the Worker serves a branded SVG
+Publish stores a versioned absolute OG URL and the server serves a branded SVG
 fallback at that URL. This intentionally avoids Satori/resvg WASM limits in the
-Worker. If raster images are required for a social platform, replace the OG
-handler boundary in `workers/api/src/routes/public-invitations.ts` with a
-Cloudflare-compatible renderer and R2 upload, retaining the same versioned URL
-contract. No extra configuration is required for the current SVG fallback.
+Worker. If raster images or image uploads are required later, add an R2 bucket
+and a Cloudflare-compatible renderer, retaining the same versioned URL contract.
+No extra configuration is required for the current SVG fallback.
 
 ## Scripts
 
-- `pnpm dev:web` — Nuxt dev server
-- `pnpm dev:api` — Wrangler dev server
+- `pnpm dev:web` — Nuxt dev server with local Cloudflare bindings
 - `pnpm db:generate` — generate Drizzle migrations
 - `pnpm db:migrate:local` — apply migrations to local D1
 - `pnpm seed:admin:local` — seed an admin user locally
 - `pnpm typecheck` — TypeScript check across all packages
 - `pnpm lint` — ESLint
 - `pnpm test` — run tests
-- `pnpm api:dry-run` — validate the Worker bundle without deploying
 - `pnpm db:migrate:staging` / `pnpm db:migrate:prod` — apply remote migrations
 - `pnpm seed:admin:staging` / `pnpm seed:admin:prod` — seed a remote admin
-- `pnpm deploy:api:staging` / `pnpm deploy:api:prod` — deploy the API Worker
+- `pnpm deploy:web` / `pnpm deploy:web:dev` — deploy Pages production / branch preview
 
 ## Environments
 
@@ -101,8 +94,7 @@ For the Cloudflare Pages Git integration use:
 - Deploy command: `pnpm exec wrangler pages deploy apps/web/dist --project-name <PAGES_PROJECT_NAME>`
 
 Replace `<PAGES_PROJECT_NAME>` with the exact Pages project name. Do not use
-`npx wrangler deploy`; that is the Worker deploy command. Deploy the API Worker
-separately through its Cloudflare Workers Build configuration.
+`npx wrangler deploy`; that is the standalone Worker deploy command.
 
 The Pages build also needs a `CLOUDFLARE_API_TOKEN` secret with **Account →
 Cloudflare Pages → Edit** permission. Add `CLOUDFLARE_ACCOUNT_ID` if the build

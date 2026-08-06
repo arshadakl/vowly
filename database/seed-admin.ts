@@ -1,17 +1,15 @@
 import { hashPassword } from '@vowly/utils'
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { resolve } from 'node:path'
 import { argv } from 'node:process'
 
-const API_DIR = resolve(import.meta.dirname, '../workers/api')
 const PNPM_COMMAND = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 
 function parseArgs() {
   const args = argv.slice(2)
   let local = true
   let env: string | null = null
-  let dbName = 'vowly-db'
+  let dbName = 'vowly'
   let username = 'admin'
   let password = ''
 
@@ -26,7 +24,7 @@ function parseArgs() {
   }
 
   if (!password) {
-    console.error('Usage: tsx database/seed-admin.ts --password <strong-secret> [--local|--remote] [--env staging] [--db vowly-db] [--username admin]')
+    console.error('Usage: tsx database/seed-admin.ts --password <strong-secret> [--local|--remote] [--env staging] [--db vowly] [--username admin]')
     process.exit(1)
   }
 
@@ -58,7 +56,6 @@ console.log(`Seeding admin "${username}" into ${local ? 'local' : 'remote'} data
 
 try {
   const output = execFileSync(PNPM_COMMAND, ['exec', 'wrangler', ...commandArgs], {
-    cwd: API_DIR,
     shell: true,
     stdio: ['pipe', 'pipe', 'pipe'],
   })

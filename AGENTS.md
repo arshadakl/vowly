@@ -3,33 +3,30 @@
 ## Project overview
 
 - Monorepo: `pnpm` workspaces
-  - `apps/web` — Nuxt 4 + Tailwind 4 + VueUse
-  - `workers/api` — Hono + Drizzle ORM + Wrangler
+  - `apps/web` — Nuxt 4 + Tailwind 4 + VueUse; API routes live under `server/api/`
   - `packages/types` — shared Zod schemas and TypeScript types
   - `packages/utils` — pure domain utilities (slug, dates, passcode, ics, countdown) + tests
   - `packages/ui` — placeholder for future shared UI primitives
   - `database/` — migration SQL output and seed script
-- Everything is meant to run on Cloudflare (Pages, Workers, D1, R2, KV).
+- Everything is meant to run on Cloudflare (Pages, Workers, D1).
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
 | `pnpm install` | Install dependencies for all packages |
-| `pnpm dev:web` | Nuxt dev server (http://localhost:3000) |
-| `pnpm dev:api` | Wrangler dev server (http://localhost:8787) |
+| `pnpm dev:web` | Nuxt dev server (http://localhost:3000) with local Cloudflare bindings |
 | `pnpm db:generate` | Generate Drizzle migration SQL |
 | `pnpm db:migrate:local` | Apply migrations to local D1 |
 | `pnpm db:migrate:staging` | Apply migrations to staging D1 |
 | `pnpm db:migrate:prod` | Apply migrations to production D1 |
 | `pnpm seed:admin:local` | Seed an admin user locally |
 | `pnpm seed:admin:staging` / `pnpm seed:admin:prod` | Seed an admin remotely (strong password required) |
-| `pnpm api:dry-run` | Build/validate the Worker without deploying |
 | `pnpm typecheck` | Type-check everything |
 | `pnpm lint` | Lint TS and web files |
 | `pnpm test` | Run tests |
 | `pnpm --filter @vowly/web build` | Production Nuxt build |
-| `pnpm deploy:api:staging` / `pnpm deploy:api:prod` | Deploy API Worker to an environment |
+| `pnpm deploy:web` / `pnpm deploy:web:dev` | Deploy Pages production / branch preview |
 
 ## Local login routes
 
@@ -48,7 +45,7 @@ Never use those credentials outside local development.
 - **No `any`**. Strict TypeScript everywhere.
 - **All request bodies** are validated with Zod on the server.
 - **Never trust frontend input**.
-- **Never store images in D1**. Use R2.
+- **Never store images in D1**. When image uploads are enabled, use R2.
 - **Never log passcodes, query strings or session tokens**.
 - **Dates and locks** are computed server-side in the client's timezone (`wedding_tz`, default `Asia/Kolkata`).
 - **Shared code lives in `packages/types` and `packages/utils`**.

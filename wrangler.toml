@@ -1,3 +1,4 @@
+#:schema node_modules/wrangler/config-schema.json
 name = "vowly"
 compatibility_date = "2025-12-01"
 compatibility_flags = ["nodejs_compat"]
@@ -5,10 +6,6 @@ pages_build_output_dir = "apps/web/dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "vowly-db"
+database_name = "vowly"
 database_id = "f0072d7c-7499-4010-810e-e774f08401e0"
 migrations_dir = "database/migrations"
-
-[[r2_buckets]]
-binding = "MEDIA"
-bucket_name = "vowly-media"

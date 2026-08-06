@@ -10,10 +10,9 @@ Vowly will use the same deployment model as the working Gas Supplier Management
 project: **one Nuxt Cloudflare Pages/Worker deployment** containing the frontend,
 server API routes, D1/R2/KV bindings, authentication, and business logic.
 
-The current `workers/api` Hono Worker is a temporary implementation source. It will
-be migrated route-by-route into `apps/web/server/api/`, verified, and removed only
-after parity tests pass. No production data or resources are deleted during this
-migration.
+The `workers/api` Hono Worker was a temporary implementation source. It has been
+migrated route-by-route into `apps/web/server/api/`, verified, and removed. No
+production data or resources were deleted during this migration.
 
 Target runtime:
 
@@ -23,10 +22,11 @@ Git push
 Cloudflare Pages/Worker: vowly
    ├── Nuxt pages and SSR
    ├── apps/web/server/api/*
-   ├── D1: DB
-   ├── R2: MEDIA
-   └── KV: RATE_LIMIT
+   └── D1: DB
 ```
+
+R2 (bound as `MEDIA`) and KV (bound as `RATE_LIMIT`) are intentionally omitted
+from V1. Image uploads and rate limiting are deferred to V2.
 
 This removes the separate web/API deployment, CORS dependency, custom `/api/*`
 Worker route, and duplicated Wrangler configuration.
@@ -45,7 +45,7 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | S1 | Spec stores client `passcode` in DB with no mention of hashing. Admin must re-share magic links, so passcodes must be retrievable. | Store passcode **plaintext in D1** (documented trade-off), readable only via admin endpoints, never logged. V2: encrypt with a key held in Workers Secrets. |
 | S2 | Admin password hashing algorithm unspecified. bcrypt and WASM Argon2 are not reliable in all Worker runtimes. | **PBKDF2-SHA-256 via WebCrypto** with 310,000 iterations and a random salt; native in Node and Cloudflare Workers. |
 | S3 | No session strategy in spec. | **Cookie sessions**: `__Host-session`, HttpOnly, Secure, SameSite=Lax. Token stored **SHA-256 hashed** in new `sessions` table. Admin TTL 12h, client TTL 30d sliding. Logout = row delete. |
-| S4 | "Use Cloudflare rate limiting" — the zone-level feature is plan-dependent and coarse. | Implement lockout ourselves in **Workers KV** (TTL built-in): key on passcode AND on IP. 10 fails → 15-min lock (spec says max 10; duration was undefined — now defined). |
+| S4 | "Use Cloudflare rate limiting" — the zone-level feature is plan-dependent and coarse. | **Deferred to V2.** V1 relies on Zod validation, honeypot fields, and owner-scoped authorization. If spam becomes a problem, add KV or Cloudflare rate limiting later. |
 | S5 | Magic link `?key=PASSCODE` leaks via browser history, logs, screenshots. | Accepted as core UX. Mitigate: `Referrer-Policy: no-referrer` on auth pages, never log query strings, document the trade-off. |
 | S6 | Spec has no passcode recovery flow. Client WILL lose it. | Admin gets **"Regenerate passcode"** button (invalidates old magic links). This is a required V1 feature, not optional. |
 
@@ -58,7 +58,7 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | D3 | When is the slug generated? Spec says permanent — but names get typo-fixed before publish. | Slug generated **once, at first publish**, from current names + date. Renames after publish do NOT change it. Unique index; collision retry `-2`, `-3` inside the same transaction. Pure, unit-tested function. |
 | D4 | One invitation per client? Implied but not enforced. | Enforce `UNIQUE(client_id)` on `invitations`. |
 | D5 | Spec's DB has no `sessions` table, no uniqueness on `passcode`, no indexes listed. | Add `sessions` table (see §3), `UNIQUE(passcode)`, indexes on `slug`, `clients.status`, `wedding_date`. FKs on with `PRAGMA foreign_keys=ON`. |
-| D6 | ARCHIVED vs DELETED behavior for the public URL undefined. | **ARCHIVED** = hidden from dashboard lists, public page stays live (couples keep memories). **DELETED** = soft delete, public URL returns 410, purge from R2 after 30 days (scheduled job). |
+| D6 | ARCHIVED vs DELETED behavior for the public URL undefined. | **ARCHIVED** = hidden from dashboard lists, public page stays live (couples keep memories). **DELETED** = soft delete, public URL returns 410. Asset cleanup deferred to V2 when R2 is added. |
 | D7 | Phone validation unspecified. | Store E.164; validate with `libphonenumber-js`; India default region. |
 
 ## 1.3 Public Features
@@ -67,7 +67,7 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 |---|---------|----------|
 | P1 | OG image generation on Workers is the **riskiest technical item** (WASM size/perf limits). | Spike in Phase 0 (see §4). Use `workers-og` (Satori + resvg-wasm), 1200×630 JPEG q80 (<300 KB so WhatsApp shows it reliably). **OG failure must never fail publish** — fall back to branded default OG, log, move on. |
 | P2 | WhatsApp/Facebook **cache OG images aggressively**. Re-publish won't update previews. | OG URL is versioned: `og/{slug}.jpg?v={published_at}`. Re-publish bumps the version. |
-| P3 | RSVP is a public unauthenticated endpoint → spam vector. | KV IP rate limit (10/hr) + honeypot field + Zod. Guest list visible only to owning client + admin. |
+| P3 | RSVP is a public unauthenticated endpoint → spam vector. | Honeypot field + Zod. Guest list visible only to owning client + admin. Rate limiting deferred to V2. |
 | P4 | "Dashboard shows RSVP totals" — which dashboard? | Client dashboard gets RSVP summary + guest list; admin sees it inside the client detail view. |
 | P5 | QR code — no backend needed. | Generate client-side (`qrcode` lib), render in invitation + share panel. |
 | P6 | Add-to-calendar — no backend needed. | Pure util in `packages/utils`: Google Calendar URL + downloadable `.ics` per event. Unit tested (dates, tz, all-day edge cases). |
@@ -78,8 +78,8 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | # | Finding | Decision |
 |---|---------|----------|
 | O1 | How is the first admin created? | Seed script (`database/seed.ts`) run via wrangler against each env. |
-| O2 | No environments defined. | 3: **local** (wrangler dev / local D1), **preview** (Cloudflare branch deployment + preview D1/R2/KV), **prod** (main deployment + production D1/R2/KV). |
-| O3 | No backups, monitoring, or on-call story. | D1 Time Travel + scheduled weekly export to R2. Uptime check on `/api/health`. Workers tail logs V1; Sentry post-launch if needed. |
+| O2 | No environments defined. | 3: **local** (wrangler dev / local D1), **preview** (Cloudflare branch deployment + preview D1), **prod** (main deployment + production D1). |
+| O3 | No backups, monitoring, or on-call story. | D1 Time Travel + scheduled weekly export stored outside the repo. Uptime check on `/api/health`. Workers tail logs V1; Sentry post-launch if needed. |
 | O4 | Spec has both `packages/` and top-level `shared/`. Two homes for shared code = drift. | Consolidate: `packages/types` (Zod schemas + DTOs shared by web AND worker), `packages/utils`. **Delete top-level `shared/`** from the structure. |
 
 ---
@@ -87,23 +87,18 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 # 2. Architecture & Tech Decisions (ADR-lite)
 
 ```
-                 ┌────────────────────────────────────────────┐
-                  ┌──────────────────────────────────────────┐
-                  │       Cloudflare Pages/Worker: vowly     │
-                  ├──────────────────────────────────────────┤
-                  │ Nuxt SSR + pages                         │
-                  │ apps/web/server/api/*                    │
-                  │ Auth, validation, business logic         │
-                  └──────────────┬──────────────┬─────────────┘
-                                 │              │
-                         ┌───────┴──────┐ ┌─────┴─────┐
-                         │ D1: DB       │ │ R2: MEDIA │
-                         │ SQLite      │ │ images   │
-                         └─────────────┘ └───────────┘
-                                 │
-                         ┌───────┴──────┐
-                         │ KV: RATE_LIMIT│
-                         └──────────────┘
+                   ┌────────────────────────────────────────────┐
+                   ┌──────────────────────────────────────────┐
+                   │       Cloudflare Pages/Worker: vowly     │
+                   ├──────────────────────────────────────────┤
+                   │ Nuxt SSR + pages                         │
+                   │ apps/web/server/api/*                    │
+                   │ Auth, validation, business logic         │
+                   └──────────────┬──────────────┬─────────────┘
+                                  │              │
+                                  │    D1: DB    │
+                                  │   SQLite     │
+                                  └─────────────┘
 ```
 
 | Decision | Choice | Rationale |
@@ -115,15 +110,15 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | ORM/migrations | **Drizzle ORM + drizzle-kit** | D1-native, lightweight, SQL-first migrations. Prisma-on-Workers is heavier. |
 | Shared validation | Zod schemas live in `packages/types`, imported by both web forms and Hono | Single source of truth — spec's "no duplicated logic". |
 | Auth | Cookie sessions in D1 (see S3), PBKDF2-SHA-256 admin password, plaintext retrievable passcodes | See §1.1. Nuxt server handlers set the cookies. |
-| Rate limiting | Workers KV with TTL | See S4. |
-| OG images | `workers-og` → R2, versioned URLs, fallback default | See P1/P2. |
+| Rate limiting | Deferred to V2 | See S4. |
+| OG images | SVG fallback served by the Worker, versioned URLs | See P1/P2. Raster OG → R2 deferred to V2. |
 | UI primitives | **Reka UI** (headless, accessible) + Tailwind; custom components in `packages/ui` | Luxury custom look without an opinionated kit; a11y for free on dialogs/dropdowns. |
 | Forms | VeeValidate + shared Zod schemas | Client editor is form-heavy; DX win, zero schema duplication. |
 | State | Composables + `useFetch` only. **No Pinia in V1.** | App is not state-complex; keep it stupidly simple. |
 | Fonts | Self-hosted via `@fontsource` | No render-blocking third-party CSS; premium typography is core to the product. |
-| Image uploads | Client-side compress (browser-image-compression) → presigned R2 PUT via Worker | Validates mime + ≤5 MB server-side. No images through the Worker body. |
+| Image uploads | Deferred to V2 | Add R2 + presigned PUT flow later. |
 | Testing | Vitest (unit) + Nuxt/Nitro route integration tests + Playwright smoke (e2e) | Tests run against the same server-route boundaries used in production. |
-| Deployment | Cloudflare Git integration with root `wrangler.toml` | One build and one deploy; D1/R2/KV bindings live in the root config. |
+| Deployment | Cloudflare Git integration with root `wrangler.toml` | One build and one deploy; D1 binding lives in the root config. |
 
 **Non-negotiables carried from spec:** strict TS, ESLint+Prettier, Zod on every
 request, proper HTTP codes, never trust frontend input, mobile-first, 2 templates max in V1.
@@ -150,27 +145,26 @@ apps/web/
 │   │   ├── public/invitations/[slug].get.ts
 │   │   └── public/invitations/[slug]/rsvp.post.ts
 │   ├── middleware/security.ts
-│   └── utils/                 # D1/R2/KV/auth server helpers
-└── wrangler.toml              # Pages output + DB/MEDIA/RATE_LIMIT bindings
+│   └── utils/                 # D1/auth server helpers
+└── wrangler.toml              # Pages output + DB binding
 
 packages/types/                # shared schemas and DTOs
 packages/utils/                # pure utilities, including password/date logic
-workers/api/                   # temporary source; removed after parity
 ```
 
 ## 3.2 Migration Order
 
 | Step | Work | Exit condition |
 |------|------|----------------|
-| SD-001 | Add root bindings for D1, R2 and KV; keep IDs environment-specific | Local `wrangler dev` exposes all bindings. |
-| SD-002 | Add server runtime helpers for D1/Drizzle, sessions, password verification, rate limits and R2 | Helpers have unit tests and no browser imports. |
+| SD-001 | Add root binding for D1; keep IDs environment-specific | Local `wrangler dev` exposes the binding. |
+| SD-002 | Add server runtime helpers for D1/Drizzle, sessions, and password verification | Helpers have unit tests and no browser imports. |
 | SD-003 | Migrate health and auth routes | Admin/client login and logout pass against local D1. |
 | SD-004 | Migrate admin client routes | CRUD, status actions, pagination and IDOR checks pass. |
 | SD-005 | Migrate client invitation/editor routes | Lock rules, events and uploads pass. |
-| SD-006 | Migrate publishing/public/RSVP routes | Publish, public SSR, RSVP and rate limits pass. |
+| SD-006 | Migrate publishing/public/RSVP routes | Publish, public SSR, and RSVP pass. |
 | SD-007 | Switch `useApi` to same-origin Nuxt server routes | No local API port or CORS dependency remains. |
 | SD-008 | Remove `workers/api`, its Wrangler config and separate deploy scripts | One Cloudflare project builds and deploys the complete product. |
-| SD-009 | Run preview migration against isolated D1/R2/KV | Full smoke flow passes on a branch deployment. |
+| SD-009 | Run preview migration against isolated D1 | Full smoke flow passes on a branch deployment. |
 
 ## 3.3 Binding Configuration
 
@@ -184,17 +178,9 @@ pages_build_output_dir = "apps/web/dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "vowly-db"
+database_name = "vowly"
 database_id = "<production-id>"
 migrations_dir = "database/migrations"
-
-[[r2_buckets]]
-binding = "MEDIA"
-bucket_name = "vowly-media"
-
-[[kv_namespaces]]
-binding = "RATE_LIMIT"
-id = "<production-id>"
 ```
 
 Preview bindings must be configured as a separate Cloudflare environment/database,
@@ -244,9 +230,9 @@ to prod only from `main` with confirmation.
 
 | Milestone | Name | Estimate | Exit Criteria |
 |-----------|------|----------|---------------|
-| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt server routes + D1/R2/KV bindings, Cloudflare preview deployment green. **Spike 1:** OG image renders on the deployed runtime. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
+| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt server routes + D1 binding, Cloudflare preview deployment green. **Spike 1:** OG image renders on the deployed runtime. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
 | **M1** | Admin Core | 4–5 d | Admin logs in/out; full client lifecycle (create → magic link → regenerate passcode → archive → delete); dashboard cards + search/filter/pagination; lockout triggers at 10 fails. |
-| **M2** | Client Editor | 6–8 d | Client logs in (passcode+phone, magic-link autofill); edits all invitation fields; unlimited sortable events CRUD; image upload (compress→R2); template picker; live preview with desktop/tablet/mobile toggle. |
+| **M2** | Client Editor | 6–8 d | Client logs in (passcode+phone, magic-link autofill); edits all invitation fields; unlimited sortable events CRUD; template picker; live preview with desktop/tablet/mobile toggle. Image upload deferred to V2. |
 | **M3** | Templates, Publish & Public Page | 6–8 d | Classic + Luxury templates (presentation-only); one-click publish (slug gen + collision + OG + idempotent); public `/[slug]` with all spec §22 sections; countdown (tz-correct); QR; share; add-to-calendar; auto-lock + admin override + locked UI. |
 | **M4** | RSVP & Hardening | 4–5 d | RSVP toggle + public submit + spam guards + totals in dashboards; security pass; perf pass (Lighthouse mobile ≥ 90 on public page); a11y pass; empty/error states; e2e smoke green. |
 | **M5** | Launch | 2–3 d | Prod env + secrets + migrations; monitoring, uptime, backups; runbook; soft-launched with 1 real client invitation. |
@@ -268,7 +254,7 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 | VOW-002 ◆ | Nuxt app + Tailwind + fontsource + `nitro-cloudflare-dev` + base layout | 0.5 | 001 |
 | VOW-003 ◆ | Root Pages/Worker Wrangler config with Nuxt server runtime and health route | 0.5–1 | 001 |
 | VOW-004 ◆ | D1 + drizzle-kit: spec schema + §4 deltas; migrate local + preview | 0.5 | 003 |
-| VOW-005 | R2 bucket + KV namespace bindings (preview/prod); root Wrangler config | 0.25 | 003 |
+| VOW-005 | D1 binding (preview/prod); root Wrangler config | 0.25 | 003 |
 | VOW-006 | Configure one Cloudflare Git build for Pages/Worker previews and production | 0.5 | 002–003 |
 | VOW-007 ◆ | **SPIKE:** OG image renders within the deployed Nuxt Worker runtime | 0.5–1 | 003 |
 | VOW-008 ◆ | **SPIKE:** Nuxt SSR dynamic OG tags verified via curl (no JS execution) | 0.25 | 002 |
@@ -294,7 +280,7 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 | VOW-021 ◆ | Invitation GET/PUT API (owner-scoped, lock-aware — D1/D2 rules server-side) | 1 | 020 |
 | VOW-022 ◆ | Editor form: bride/groom names, quote, wedding date display (VeeValidate + shared zod) | 1 | 021 |
 | VOW-023 ◆ | Events CRUD: unlimited, drag-sort (`sort_order`), all spec §8 fields | 1.5 | 021 |
-| VOW-024 ◆ | Image upload: client compress → presigned R2 PUT → save key (cover/bride/groom) | 1 | 021 |
+| VOW-024 | Image upload: client compress → presigned R2 PUT → save key (cover/bride/groom) | Deferred to V2 | 021 |
 | VOW-025 | Template picker (Classic/Luxury) wired to `invitations.template` | 0.25 | 022 |
 | VOW-026 ◆ | Live preview pane with device toggle; instant reflect of form state | 1 | 022–025 |
 | VOW-027 | Locked-state UI + "event has ended" message (also enforced by API 403) | 0.5 | 021 |
@@ -307,7 +293,7 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 | VOW-031 ◆ | `LuxuryTemplate.vue` — same invitation object, presentation-only | 1.5 | 030 |
 | VOW-032 ◆ | Publish API: transaction { slug gen + collision retry, published flags, OG job } — idempotent | 1 | 021 |
 | VOW-033 ◆ | Slug util (normalize → kebab → `-2`/`-3`) + unit tests | 0.25 | — |
-| VOW-034 ◆ | OG generation at publish → R2 + versioned URL; fallback default on failure | 0.5–1 | 007,032 |
+| VOW-034 ◆ | OG versioned URL + SVG fallback served by the Worker | 0.5–1 | 007,032 |
 | VOW-035 ◆ | Public `/[slug]` SSR page + OG/Twitter meta + `noindex` on app areas | 1 | 030–032 |
 | VOW-036 | Countdown component (tz-safe; "Thank you…" state) | 0.5 | 030 |
 | VOW-037 | Share: copy link, WhatsApp deep link, QR display/download | 0.5 | 035 |
@@ -330,9 +316,9 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 
 | ID | Task | Est | Depends |
 |----|------|-----|---------|
-| VOW-050 | Prod D1/R2/KV + secrets + migrations apply + seed admin | 0.5 | M4 |
+| VOW-050 | Prod D1 + migrations apply + seed admin | 0.5 | M4 |
 | VOW-051 | Uptime monitor on `/api/health` + alert; wrangler tail runbook | 0.25 | 050 |
-| VOW-052 | Weekly D1 export → R2 (scheduled worker) + Time Travel verified | 0.5 | 050 |
+| VOW-052 | Weekly D1 export stored outside the repo + Time Travel verified | 0.5 | 050 |
 | VOW-053 | Launch checklist run (§8) + load sanity (100 concurrent RSVP/posts) | 0.5 | 050 |
 | VOW-054 | Soft launch: 1 real client end-to-end; fix-forward window | 0.5–1 | 053 |
 | VOW-055 | README + AGENTS.md (env, commands, deploy, runbook) | 0.25 | 050 |
@@ -365,7 +351,7 @@ feature/* → PR → Cloudflare Pages/Worker preview deployment
 main      → merge → Cloudflare Pages/Worker production deployment
 ```
 
-- **Envs:** local / preview / prod — separate D1, R2, KV, secrets (`wrangler secret put`).
+- **Envs:** local / preview / prod — separate D1 and secrets (`wrangler secret put`).
 - **Deployment:** managed by one Cloudflare Git integration; no GitHub Actions workflow is used.
 - **Quality checks:** run `pnpm typecheck`, `pnpm lint` and `pnpm test` locally before pushing.
 - **Secrets** stay in Cloudflare Workers Secrets and Pages environment variables; never in the repo.
