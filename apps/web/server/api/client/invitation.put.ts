@@ -1,0 +1,10 @@
+import { invitationUpdateSchema, type EventInput } from '@vowly/types'
+import { editorContext, assertEditable, presentEditor } from '../../utils/editor'
+import { apiError, body } from '../../utils/http'
+import { getEnv } from '../../utils/env'
+export default defineEventHandler(async (event) => {
+  const context = await editorContext(event); assertEditable(context); const parsed = invitationUpdateSchema.safeParse(await body(event)); if (!parsed.success) apiError('INVALID_INPUT', 'Invitation details are invalid.', 400)
+  const input = parsed.data; const db = getEnv(event).DB; const statements = [db.prepare('UPDATE invitations SET bride_name = ?, groom_name = ?, quote = ?, template = ?, cover_image = ?, bride_image = ?, groom_image = ?, rsvp_enabled = COALESCE(?, rsvp_enabled), updated_at = ? WHERE id = ? AND client_id = ?').bind(input.brideName, input.groomName, input.quote ?? null, input.template, input.coverImage ?? null, input.brideImage ?? null, input.groomImage ?? null, input.rsvpEnabled === undefined ? null : input.rsvpEnabled ? 1 : 0, new Date().toISOString(), context.invitation.id, context.client.id)]
+  if (input.events) { statements.push(db.prepare('DELETE FROM events WHERE invitation_id = ?').bind(context.invitation.id)); for (const [index, item] of input.events.entries()) { const eventInput = item as EventInput; statements.push(db.prepare('INSERT INTO events (id, invitation_id, title, event_date, start_time, end_time, venue, google_map, address, notes, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(crypto.randomUUID(), context.invitation.id, eventInput.title, eventInput.eventDate, eventInput.startTime ?? null, eventInput.endTime ?? null, eventInput.venue ?? null, eventInput.googleMapUrl ?? null, eventInput.address ?? null, eventInput.notes ?? null, eventInput.sortOrder ?? index)) } }
+  await db.batch(statements); const updated = await db.prepare('SELECT * FROM invitations WHERE id = ?').bind(context.invitation.id).first<typeof context.invitation>(); return presentEditor(event, { ...context, invitation: updated!, locked: false })
+})

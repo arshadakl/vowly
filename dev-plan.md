@@ -4,6 +4,33 @@
 > phases, task breakdown, estimates, quality gates, and risk management.
 > Assumed team: 1 senior developer + coding agent. Estimates in ideal dev-days.
 
+## Architecture Rebaseline
+
+Vowly will use the same deployment model as the working Gas Supplier Management
+project: **one Nuxt Cloudflare Pages/Worker deployment** containing the frontend,
+server API routes, D1/R2/KV bindings, authentication, and business logic.
+
+The current `workers/api` Hono Worker is a temporary implementation source. It will
+be migrated route-by-route into `apps/web/server/api/`, verified, and removed only
+after parity tests pass. No production data or resources are deleted during this
+migration.
+
+Target runtime:
+
+```text
+Git push
+   ↓
+Cloudflare Pages/Worker: vowly
+   ├── Nuxt pages and SSR
+   ├── apps/web/server/api/*
+   ├── D1: DB
+   ├── R2: MEDIA
+   └── KV: RATE_LIMIT
+```
+
+This removes the separate web/API deployment, CORS dependency, custom `/api/*`
+Worker route, and duplicated Wrangler configuration.
+
 ---
 
 # 1. Spec Review — Findings & Decisions
@@ -44,14 +71,14 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | P4 | "Dashboard shows RSVP totals" — which dashboard? | Client dashboard gets RSVP summary + guest list; admin sees it inside the client detail view. |
 | P5 | QR code — no backend needed. | Generate client-side (`qrcode` lib), render in invitation + share panel. |
 | P6 | Add-to-calendar — no backend needed. | Pure util in `packages/utils`: Google Calendar URL + downloadable `.ics` per event. Unit tested (dates, tz, all-day edge cases). |
-| P7 | Crawlers must see OG tags → public page must be SSR, no auth wall. | Nuxt SSR route `/[slug]` fetches via internal API (Service Binding), injects `og:*`/`twitter:*` with absolute URLs. Admin/client areas ship `noindex`. |
+| P7 | Crawlers must see OG tags → public page must be SSR, no auth wall. | Nuxt SSR route `/[slug]` calls the local server service directly, injects `og:*`/`twitter:*` with absolute URLs. Admin/client areas ship `noindex`. |
 
 ## 1.4 Ops Gaps
 
 | # | Finding | Decision |
 |---|---------|----------|
 | O1 | How is the first admin created? | Seed script (`database/seed.ts`) run via wrangler against each env. |
-| O2 | No environments defined. | 3: **local** (wrangler dev / miniflare), **staging** (Pages preview + `vowly-api-staging` + staging D1/R2/KV), **prod**. |
+| O2 | No environments defined. | 3: **local** (wrangler dev / local D1), **preview** (Cloudflare branch deployment + preview D1/R2/KV), **prod** (main deployment + production D1/R2/KV). |
 | O3 | No backups, monitoring, or on-call story. | D1 Time Travel + scheduled weekly export to R2. Uptime check on `/api/health`. Workers tail logs V1; Sentry post-launch if needed. |
 | O4 | Spec has both `packages/` and top-level `shared/`. Two homes for shared code = drift. | Consolidate: `packages/types` (Zod schemas + DTOs shared by web AND worker), `packages/utils`. **Delete top-level `shared/`** from the structure. |
 
@@ -61,29 +88,33 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 
 ```
                  ┌────────────────────────────────────────────┐
-                 │              vowly.app (one zone)          │
-                 ├───────────────────────┬────────────────────┤
-                 │  /*  → Cloudflare     │ /api/* → Workers   │
-                 │       Pages (Nuxt SSR)│        (Hono API)  │
-                 └──────────┬────────────┴─────────┬──────────┘
-                            │  Service Binding     │
-                            └──────────────────────┘
-                                                   │
-                          ┌──────────┬─────────────┼──────────┐
-                          │   D1     │     R2      │    KV    │
-                          │ (SQLite) │  (images/OG)│ (locks)  │
-                          └──────────┴─────────────┴──────────┘
+                  ┌──────────────────────────────────────────┐
+                  │       Cloudflare Pages/Worker: vowly     │
+                  ├──────────────────────────────────────────┤
+                  │ Nuxt SSR + pages                         │
+                  │ apps/web/server/api/*                    │
+                  │ Auth, validation, business logic         │
+                  └──────────────┬──────────────┬─────────────┘
+                                 │              │
+                         ┌───────┴──────┐ ┌─────┴─────┐
+                         │ D1: DB       │ │ R2: MEDIA │
+                         │ SQLite      │ │ images   │
+                         └─────────────┘ └───────────┘
+                                 │
+                         ┌───────┴──────┐
+                         │ KV: RATE_LIMIT│
+                         └──────────────┘
 ```
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Monorepo | **pnpm workspaces** (no Turborepo) | Spec's structure; Turborepo is overhead for 1 dev. npm scripts suffice. |
-| Web deploy | Nuxt 3 SSR → **Cloudflare Pages** (Nitro `cloudflare-pages` preset) | Spec. OG tags need SSR; verified in Phase 0 spike. |
-| API | **Hono + `@hono/zod-validator`** on Workers | Spec. Thin controllers, logic in services. |
-| Same-origin routing | Custom domain; route `/api/*` to Worker on the same zone | Kills CORS entirely; first-party cookies. Validated in Phase 0. |
+| Web/API deploy | Nuxt 4 SSR + Nitro `cloudflare-pages` preset → **one Cloudflare Pages/Worker project** | Matches the proven Gas project setup and removes a deployment boundary. |
+| API | Nuxt server routes under `apps/web/server/api/` | Same runtime and bindings as the web app; no Hono Worker boundary. |
+| Same-origin routing | Nuxt server routes handle `/api/*` internally | No CORS, service binding, or custom Worker route required. |
 | ORM/migrations | **Drizzle ORM + drizzle-kit** | D1-native, lightweight, SQL-first migrations. Prisma-on-Workers is heavier. |
 | Shared validation | Zod schemas live in `packages/types`, imported by both web forms and Hono | Single source of truth — spec's "no duplicated logic". |
-| Auth | Cookie sessions in D1 (see S3), PBKDF2-SHA-256 admin password, plaintext retrievable passcodes | See §1.1. |
+| Auth | Cookie sessions in D1 (see S3), PBKDF2-SHA-256 admin password, plaintext retrievable passcodes | See §1.1. Nuxt server handlers set the cookies. |
 | Rate limiting | Workers KV with TTL | See S4. |
 | OG images | `workers-og` → R2, versioned URLs, fallback default | See P1/P2. |
 | UI primitives | **Reka UI** (headless, accessible) + Tailwind; custom components in `packages/ui` | Luxury custom look without an opinionated kit; a11y for free on dialogs/dropdowns. |
@@ -91,15 +122,97 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | State | Composables + `useFetch` only. **No Pinia in V1.** | App is not state-complex; keep it stupidly simple. |
 | Fonts | Self-hosted via `@fontsource` | No render-blocking third-party CSS; premium typography is core to the product. |
 | Image uploads | Client-side compress (browser-image-compression) → presigned R2 PUT via Worker | Validates mime + ≤5 MB server-side. No images through the Worker body. |
-| Testing | Vitest (unit) + `@cloudflare/vitest-pool-workers` (API) + Playwright smoke (e2e) | See §6. |
-| Deployment | Cloudflare Git integrations for Pages and Workers Builds | Cloudflare owns preview and production deployments; local quality commands remain available. |
+| Testing | Vitest (unit) + Nuxt/Nitro route integration tests + Playwright smoke (e2e) | Tests run against the same server-route boundaries used in production. |
+| Deployment | Cloudflare Git integration with root `wrangler.toml` | One build and one deploy; D1/R2/KV bindings live in the root config. |
 
 **Non-negotiables carried from spec:** strict TS, ESLint+Prettier, Zod on every
 request, proper HTTP codes, never trust frontend input, mobile-first, 2 templates max in V1.
 
 ---
 
-# 3. Data Model Deltas (vs spec §26)
+# 3. Single-Deployment Migration Plan
+
+The migration is additive and reversible. The existing Hono API remains available
+until the Nuxt server-route equivalent passes parity checks.
+
+## 3.1 Target Structure
+
+```text
+apps/web/
+├── app/                       # Nuxt pages/components
+├── server/
+│   ├── api/
+│   │   ├── health.get.ts
+│   │   ├── auth/admin/*.ts
+│   │   ├── auth/client/*.ts
+│   │   ├── admin/clients/*.ts
+│   │   ├── client/invitation/*.ts
+│   │   ├── public/invitations/[slug].get.ts
+│   │   └── public/invitations/[slug]/rsvp.post.ts
+│   ├── middleware/security.ts
+│   └── utils/                 # D1/R2/KV/auth server helpers
+└── wrangler.toml              # Pages output + DB/MEDIA/RATE_LIMIT bindings
+
+packages/types/                # shared schemas and DTOs
+packages/utils/                # pure utilities, including password/date logic
+workers/api/                   # temporary source; removed after parity
+```
+
+## 3.2 Migration Order
+
+| Step | Work | Exit condition |
+|------|------|----------------|
+| SD-001 | Add root bindings for D1, R2 and KV; keep IDs environment-specific | Local `wrangler dev` exposes all bindings. |
+| SD-002 | Add server runtime helpers for D1/Drizzle, sessions, password verification, rate limits and R2 | Helpers have unit tests and no browser imports. |
+| SD-003 | Migrate health and auth routes | Admin/client login and logout pass against local D1. |
+| SD-004 | Migrate admin client routes | CRUD, status actions, pagination and IDOR checks pass. |
+| SD-005 | Migrate client invitation/editor routes | Lock rules, events and uploads pass. |
+| SD-006 | Migrate publishing/public/RSVP routes | Publish, public SSR, RSVP and rate limits pass. |
+| SD-007 | Switch `useApi` to same-origin Nuxt server routes | No local API port or CORS dependency remains. |
+| SD-008 | Remove `workers/api`, its Wrangler config and separate deploy scripts | One Cloudflare project builds and deploys the complete product. |
+| SD-009 | Run preview migration against isolated D1/R2/KV | Full smoke flow passes on a branch deployment. |
+
+## 3.3 Binding Configuration
+
+The root `wrangler.toml` becomes the only web deployment configuration:
+
+```toml
+name = "vowly"
+compatibility_date = "2025-12-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "apps/web/dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vowly-db"
+database_id = "<production-id>"
+migrations_dir = "database/migrations"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "vowly-media"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "<production-id>"
+```
+
+Preview bindings must be configured as a separate Cloudflare environment/database,
+never by pointing preview builds at production D1.
+
+## 3.4 Deployment Contract
+
+```text
+Build:  pnpm run build
+Deploy: pnpm exec wrangler pages deploy apps/web/dist --project-name vowly
+```
+
+Cloudflare Pages handles the single deployment. There is no separate API Worker,
+API route, service binding, or CORS configuration after SD-008.
+
+---
+
+# 4. Data Model Deltas (vs spec §26)
 
 Keep spec tables, with these changes:
 
@@ -119,19 +232,19 @@ sessions(id TEXT PK, subject_type TEXT CHECK(subject_type IN ('admin','client'))
 --          events.invitation_id, rsvp.invitation_id, sessions.expires_at
 ```
 
-Migrations: `database/migrations/` via drizzle-kit. Applied to staging automatically,
+Migrations: `database/migrations/` via drizzle-kit. Applied to preview automatically,
 to prod only from `main` with confirmation.
 
 ---
 
-# 4. Phases & Milestones
+# 5. Phases & Milestones
 
 > **Rule:** the riskiest tech is spiked FIRST (M0), not discovered in M3.
 > Every milestone has exit criteria — "done" means the criteria, not the vibes.
 
 | Milestone | Name | Estimate | Exit Criteria |
 |-----------|------|----------|---------------|
-| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt on Pages + Hono Worker on same domain `/api/*`, D1 migrated, R2/KV bound, Cloudflare preview deployment green. **Spike 1:** OG image renders on a real Worker. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
+| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt server routes + D1/R2/KV bindings, Cloudflare preview deployment green. **Spike 1:** OG image renders on the deployed runtime. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
 | **M1** | Admin Core | 4–5 d | Admin logs in/out; full client lifecycle (create → magic link → regenerate passcode → archive → delete); dashboard cards + search/filter/pagination; lockout triggers at 10 fails. |
 | **M2** | Client Editor | 6–8 d | Client logs in (passcode+phone, magic-link autofill); edits all invitation fields; unlimited sortable events CRUD; image upload (compress→R2); template picker; live preview with desktop/tablet/mobile toggle. |
 | **M3** | Templates, Publish & Public Page | 6–8 d | Classic + Luxury templates (presentation-only); one-click publish (slug gen + collision + OG + idempotent); public `/[slug]` with all spec §22 sections; countdown (tz-correct); QR; share; add-to-calendar; auto-lock + admin override + locked UI. |
@@ -143,7 +256,7 @@ Estimates assume the phase order below — dependencies are real; do not paralle
 
 ---
 
-# 5. Task Breakdown & Estimates
+# 6. Task Breakdown & Estimates
 
 Ticket format `VOW-###`. `◆` = on the critical path.
 
@@ -151,13 +264,13 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 
 | ID | Task | Est | Depends |
 |----|------|-----|---------|
-| VOW-001 ◆ | pnpm monorepo scaffold (apps/web, workers/api, packages/{ui,types,utils}, database), shared tsconfig/eslint/prettier | 0.5 | — |
-| VOW-002 ◆ | Nuxt app + Tailwind + fontsource + base layout; deploy to Pages (staging) | 0.5 | 001 |
-| VOW-003 ◆ | Hono worker + health route; custom domain + `/api/*` route; Service Binding from Pages | 0.5–1 | 001 |
-| VOW-004 ◆ | D1 + drizzle-kit: spec schema + §3 deltas; migrate local + staging | 0.5 | 003 |
-| VOW-005 | R2 buckets + KV namespaces (staging/prod); wrangler config per env | 0.25 | 003 |
-| VOW-006 | Configure Cloudflare Git integrations for Pages previews and Workers Builds | 0.5 | 002–003 |
-| VOW-007 ◆ | **SPIKE:** workers-og renders 1200×630 JPEG ≤300 KB on a real deployed Worker | 0.5–1 | 003 |
+| VOW-001 ◆ | pnpm monorepo scaffold (apps/web, packages/{ui,types,utils}, database), shared tsconfig/eslint/prettier | 0.5 | — |
+| VOW-002 ◆ | Nuxt app + Tailwind + fontsource + `nitro-cloudflare-dev` + base layout | 0.5 | 001 |
+| VOW-003 ◆ | Root Pages/Worker Wrangler config with Nuxt server runtime and health route | 0.5–1 | 001 |
+| VOW-004 ◆ | D1 + drizzle-kit: spec schema + §4 deltas; migrate local + preview | 0.5 | 003 |
+| VOW-005 | R2 bucket + KV namespace bindings (preview/prod); root Wrangler config | 0.25 | 003 |
+| VOW-006 | Configure one Cloudflare Git build for Pages/Worker previews and production | 0.5 | 002–003 |
+| VOW-007 ◆ | **SPIKE:** OG image renders within the deployed Nuxt Worker runtime | 0.5–1 | 003 |
 | VOW-008 ◆ | **SPIKE:** Nuxt SSR dynamic OG tags verified via curl (no JS execution) | 0.25 | 002 |
 | VOW-009 | Seed script: create admin (PBKDF2-SHA-256) per env | 0.25 | 004 |
 
@@ -226,42 +339,42 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 
 ---
 
-# 6. Testing Strategy & Quality Gates
+# 7. Testing Strategy & Quality Gates
 
 **Pyramid (kept deliberately lean):**
 
 - **Unit (Vitest)** — `packages/utils` + `packages/types`: slug gen/collision, countdown math, lock-rule function, ics builder, passcode gen, all zod schemas. *These are pure and cheap; aim ~90% coverage here.*
-- **API integration (`@cloudflare/vitest-pool-workers`)** — real D1 locally: auth flows, lockout at 10, owner-scoping (client A cannot read/write client B — IDOR), publish transaction, RSVP limits.
+- **Server-route integration** — real local Cloudflare bindings: auth flows, lockout at 10, owner-scoping (client A cannot read/write client B — IDOR), publish transaction, RSVP limits.
 - **E2E (Playwright)** — ONE smoke suite, ~6 flows (VOW-046). Runs on `main` + pre-release, not per-PR.
 
 **Quality gates:**
 
 | Gate | When | Requirement |
 |------|------|-------------|
-| PR gate | Every PR | typecheck 0 errors, lint 0 warnings, unit+API tests green, preview deploy succeeds |
+| PR gate | Every PR | typecheck 0 errors, lint 0 warnings, unit+server-route tests green, preview deploy succeeds |
 | Milestone gate | End of each M | Exit criteria checklist (§4) reviewed and ticked |
 | Release gate | Before prod | E2E smoke green, Lighthouse mobile ≥ 90 on public page, manual a11y sweep, security pass (VOW-042) done |
 | Definition of Done | Every task | Responsive, typed, zod-validated server-side, errors handled, no `any`, works on 360px viewport |
 
 ---
 
-# 7. Cloudflare Deployments & Environments
+# 8. Cloudflare Deployments & Environments
 
 ```
-feature/* → PR → Cloudflare Pages preview deployment
-main      → merge → Cloudflare Pages production deployment + Workers Build deployment
+feature/* → PR → Cloudflare Pages/Worker preview deployment
+main      → merge → Cloudflare Pages/Worker production deployment
 ```
 
-- **Envs:** local / staging / prod — separate D1, R2, KV, secrets (`wrangler secret put`).
-- **Deployments:** managed by Cloudflare Git integrations; no GitHub Actions workflow is used.
+- **Envs:** local / preview / prod — separate D1, R2, KV, secrets (`wrangler secret put`).
+- **Deployment:** managed by one Cloudflare Git integration; no GitHub Actions workflow is used.
 - **Quality checks:** run `pnpm typecheck`, `pnpm lint` and `pnpm test` locally before pushing.
 - **Secrets** stay in Cloudflare Workers Secrets and Pages environment variables; never in the repo.
 - **Migrations** are one-way, numbered, never edited after merge.
-- **Rollback:** Pages instant rollback; Worker `wrangler rollback`; D1 via Time Travel.
+- **Rollback:** Cloudflare deployment rollback; D1 via Time Travel.
 
 ---
 
-# 8. Risk Register
+# 9. Risk Register
 
 | # | Risk | P | Impact | Mitigation |
 |---|------|---|--------|-----------|
@@ -278,7 +391,7 @@ main      → merge → Cloudflare Pages production deployment + Workers Build d
 
 ---
 
-# 9. Launch Checklist (M5 gate)
+# 10. Launch Checklist (M5 gate)
 
 - [ ] All Release gates green (§6)
 - [ ] Prod admin seeded with strong password; default creds nowhere
@@ -291,7 +404,7 @@ main      → merge → Cloudflare Pages production deployment + Workers Build d
 
 ---
 
-# 10. V2 Backlog (mapping spec §30 — do NOT pull into V1)
+# 11. V2 Backlog (mapping spec §30 — do NOT pull into V1)
 
 Guest Book · Gallery · Background Music · Confetti · i18n · Analytics ·
 Custom Domains · Wedding Timeline · Multi-tenant Admins · Payments ·

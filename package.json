@@ -23,6 +23,8 @@
     "seed:admin:staging": "tsx database/seed-admin.ts --remote --env staging --db vowly-db-staging",
     "seed:admin:prod": "tsx database/seed-admin.ts --remote --db vowly-db",
     "api:dry-run": "pnpm --filter @vowly/api dry-run",
+    "deploy:web": "pnpm --filter @vowly/web build && wrangler pages deploy apps/web/dist --project-name vowly",
+    "deploy:web:dev": "pnpm --filter @vowly/web build && wrangler pages deploy apps/web/dist --project-name vowly --branch dev",
     "deploy:api:staging": "pnpm --filter @vowly/api deploy:staging",
     "deploy:api:prod": "pnpm --filter @vowly/api deploy:production"
   },
@@ -41,6 +43,7 @@
     "prettier": "^3.9.6",
     "tsx": "^4.23.9",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.66.0"
+    "typescript-eslint": "^8.66.0",
+    "wrangler": "^4.119.0"
   }
 }

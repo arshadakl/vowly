@@ -47,7 +47,7 @@ Configure the Pages project with these values:
 | Root directory | `/` |
 | Build command | `pnpm --filter @vowly/web build` |
 | Build output directory | `apps/web/dist` |
-| Deploy command | `pnpm --filter @vowly/api exec wrangler pages deploy ../../apps/web/dist --project-name <PAGES_PROJECT_NAME>` |
+| Deploy command | `pnpm exec wrangler pages deploy apps/web/dist --project-name <PAGES_PROJECT_NAME>` |
 
 This project uses a Cloudflare build configuration that requires a deploy command.
 Use the Pages deploy command above. Replace `<PAGES_PROJECT_NAME>` with the exact
@@ -58,7 +58,7 @@ dependency. Deploy the API separately through the `vowly-api` Workers Build.
 For non-production branch deployments, use the same command with the branch name:
 
 ```bash
-pnpm --filter @vowly/api exec wrangler pages deploy ../../apps/web/dist --project-name <PAGES_PROJECT_NAME> --branch "$CF_PAGES_BRANCH"
+pnpm exec wrangler pages deploy apps/web/dist --project-name <PAGES_PROJECT_NAME> --branch "$CF_PAGES_BRANCH"
 ```
 
 Set `NUXT_PUBLIC_API_BASE` to the staging API origin for preview/staging builds.

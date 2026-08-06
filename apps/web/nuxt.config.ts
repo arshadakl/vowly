@@ -7,16 +7,14 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   nitro: {
     preset: 'cloudflare-pages',
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true,
+    },
+    modules: ['nitro-cloudflare-dev'],
   },
   vite: {
     plugins: [tailwindcss()],
-  },
-  runtimeConfig: {
-    public: {
-      apiBase:
-        process.env.NUXT_PUBLIC_API_BASE ??
-        (process.env.NODE_ENV === 'development' ? 'http://localhost:8787' : ''),
-    },
   },
   app: {
     head: {
