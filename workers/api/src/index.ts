@@ -5,6 +5,8 @@ import adminAuth from './routes/admin-auth'
 import adminClients from './routes/admin-clients'
 import clientAuth from './routes/client-auth'
 import clientEditor from './routes/client-editor'
+import publishing from './routes/publishing'
+import publicInvitations from './routes/public-invitations'
 import { notFound, onError } from './middleware/errors'
 import type { Env } from './lib/env'
 
@@ -22,6 +24,9 @@ app.route('/auth/admin', adminAuth)
 app.route('/auth/client', clientAuth)
 app.route('/admin/clients', adminClients)
 app.route('/client', clientEditor)
+app.route('/client', publishing)
+app.route('/public', publicInvitations)
+app.route('/admin', publishing)
 
 app.notFound(notFound)
 app.onError(onError)

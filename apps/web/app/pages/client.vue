@@ -81,6 +81,15 @@ async function save() {
     notice.value = 'Invitation saved.'
   } catch (error: unknown) { errorMessage.value = error instanceof Error ? error.message : 'Could not save invitation.' } finally { saving.value = false }
 }
+async function setPublished(published: boolean) {
+  if (!draft.value) return
+  try {
+    const result = await api<{ published: boolean; slug?: string }>('/client/invitation/' + (published ? 'publish' : 'unpublish'), { method: 'POST' })
+    draft.value.published = result.published
+    if (result.slug) draft.value.slug = result.slug
+    notice.value = published ? `Published at /${result.slug}` : 'Invitation unpublished.'
+  } catch (error: unknown) { errorMessage.value = error instanceof Error ? error.message : 'Could not change publishing status.' }
+}
 async function upload(field: 'coverImage' | 'brideImage' | 'groomImage', event: Event) {
   if (!draft.value || draft.value.locked) return
   const input = event.target as HTMLInputElement
@@ -115,7 +124,8 @@ async function logout() { await api('/auth/client/logout', { method: 'POST' }); 
           <div><p class="text-sm">Images</p><div class="mt-2 grid grid-cols-3 gap-2"><label v-for="field in (['coverImage', 'brideImage', 'groomImage'] as const)" :key="field" class="cursor-pointer border border-dashed border-ink-900/20 bg-white p-3 text-center text-[10px] uppercase tracking-wider"><span>{{ field.replace('Image', '') }}</span><input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" :disabled="draft.locked" @change="upload(field, $event)"></label></div></div>
           <div><div class="flex items-center justify-between"><p class="text-sm">Events</p><button class="text-xs uppercase tracking-widest text-gold-600" :disabled="draft.locked" @click="addEvent">+ Add event</button></div><div v-for="(event, index) in draft.events" :key="event.id || index" class="mt-3 border border-ink-900/10 bg-white p-4"><div class="flex gap-2"><input v-model="event.title" :disabled="draft.locked" placeholder="Event title" class="editor-input flex-1"><button :disabled="draft.locked" class="text-xs" @click="removeEvent(index)">Remove</button></div><div class="mt-3 grid grid-cols-2 gap-2"><input v-model="event.eventDate" type="date" :disabled="draft.locked" class="editor-input"><input v-model="event.venue" :disabled="draft.locked" placeholder="Venue" class="editor-input"><input v-model="event.startTime" type="time" :disabled="draft.locked" class="editor-input"><input v-model="event.endTime" type="time" :disabled="draft.locked" class="editor-input"><input v-model="event.googleMapUrl" :disabled="draft.locked" placeholder="Google Maps URL" class="editor-input col-span-2"><input v-model="event.address" :disabled="draft.locked" placeholder="Address" class="editor-input col-span-2"><textarea v-model="event.notes" :disabled="draft.locked" placeholder="Notes" class="editor-input col-span-2"/></div><div class="mt-3 flex gap-3 text-xs"><button :disabled="index === 0 || draft.locked" @click="moveEvent(index, -1)">Move up</button><button :disabled="index === draft.events.length - 1 || draft.locked" @click="moveEvent(index, 1)">Move down</button></div></div></div>
         </div>
-        <button class="mt-7 w-full bg-ink-900 py-4 text-xs uppercase tracking-[0.2em] text-white hover:bg-gold-600 disabled:opacity-40" :disabled="saving || draft.locked" @click="save">{{ saving ? 'Saving...' : 'Save invitation' }}</button>
+         <div class="mt-7 grid gap-3 sm:grid-cols-2"><button class="bg-ink-900 py-4 text-xs uppercase tracking-[0.2em] text-white hover:bg-gold-600 disabled:opacity-40" :disabled="saving || draft.locked" @click="save">{{ saving ? 'Saving...' : 'Save invitation' }}</button><button class="border border-gold-600 py-4 text-xs uppercase tracking-[0.2em] text-gold-700 disabled:opacity-40" :disabled="draft.locked" @click="setPublished(!draft.published)">{{ draft.published ? 'Unpublish' : 'Publish invitation' }}</button></div>
+         <p v-if="draft.published && draft.slug" class="mt-3 text-center text-xs text-ink-700">Public link: <a :href="`/${draft.slug}`" target="_blank" class="text-gold-700 underline">/{{ draft.slug }}</a></p>
       </section>
       <section class="min-w-0"><div class="sticky top-5"><div class="mb-4 flex items-center justify-between"><p class="text-[10px] uppercase tracking-[0.24em] text-gold-600">Live preview</p><div class="flex border border-ink-900/15 bg-white text-xs"><button v-for="option in (['desktop', 'tablet', 'mobile'] as const)" :key="option" :class="device === option ? 'bg-ink-900 text-white' : ''" class="px-3 py-2 capitalize" @click="device = option">{{ option }}</button></div></div><div class="flex justify-center overflow-auto border border-ink-900/10 bg-[#d9d4ca] p-3 sm:p-6"><div v-if="preview" :class="previewWidth" class="overflow-hidden bg-white shadow-2xl transition-all"><TemplateRenderer :invitation="preview" /></div></div></div></section>
     </main>

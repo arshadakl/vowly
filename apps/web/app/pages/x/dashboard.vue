@@ -119,6 +119,12 @@ async function logout() {
   await api('/auth/admin/logout', { method: 'POST' })
   await navigateTo('/x/login')
 }
+async function setOverride(client: Client, override: 'force_open' | 'force_locked' | null) {
+  try {
+    await api(`/admin/clients/${client.id}/invitation/override`, { method: 'POST', body: { override } })
+    notice.value = `${client.name} edit lock updated.`
+  } catch (error: unknown) { errorMessage.value = error instanceof Error ? error.message : 'Could not update edit lock.' }
+}
 </script>
 
 <template>
@@ -167,7 +173,7 @@ async function logout() {
         <div v-else-if="clients?.items.length" class="mt-5 overflow-x-auto border border-ink-900/10 bg-white">
           <table class="w-full min-w-[720px] text-left text-sm">
             <thead class="border-b border-ink-900/10 bg-[#faf8f3] text-[10px] uppercase tracking-[0.18em] text-ink-700/60"><tr><th class="px-5 py-4">Client</th><th class="px-5 py-4">Wedding date</th><th class="px-5 py-4">Passcode</th><th class="px-5 py-4">Status</th><th class="px-5 py-4 text-right">Actions</th></tr></thead>
-            <tbody><tr v-for="client in clients.items" :key="client.id" class="border-b border-ink-900/10 last:border-0"><td class="px-5 py-5"><p class="font-medium">{{ client.name }}</p><p class="mt-1 text-xs text-ink-700/60">{{ client.clientCode }} · {{ client.phone }}</p></td><td class="px-5 py-5 text-ink-700">{{ client.weddingDate }}</td><td class="px-5 py-5 font-mono text-xs tracking-widest">{{ client.passcode }}</td><td class="px-5 py-5"><span class="border border-gold-500/40 px-2 py-1 text-[10px] uppercase tracking-widest text-gold-600">{{ client.status.replace('_', ' ') }}</span></td><td class="px-5 py-5"><div class="flex justify-end gap-3 text-xs text-ink-700"><button class="hover:text-gold-600" @click="startEdit(client)">Edit</button><button class="hover:text-gold-600" @click="runAction(client, 'passcode')">New code</button><button v-if="client.status === 'ACTIVE'" class="hover:text-gold-600" @click="runAction(client, 'archive')">Archive</button><button v-if="client.status !== 'DELETED'" class="text-red-700 hover:text-red-500" @click="runAction(client, 'delete')">Delete</button></div></td></tr></tbody>
+            <tbody><tr v-for="client in clients.items" :key="client.id" class="border-b border-ink-900/10 last:border-0"><td class="px-5 py-5"><p class="font-medium">{{ client.name }}</p><p class="mt-1 text-xs text-ink-700/60">{{ client.clientCode }} · {{ client.phone }}</p></td><td class="px-5 py-5 text-ink-700">{{ client.weddingDate }}</td><td class="px-5 py-5 font-mono text-xs tracking-widest">{{ client.passcode }}</td><td class="px-5 py-5"><span class="border border-gold-500/40 px-2 py-1 text-[10px] uppercase tracking-widest text-gold-600">{{ client.status.replace('_', ' ') }}</span></td><td class="px-5 py-5"><div class="flex flex-wrap justify-end gap-3 text-xs text-ink-700"><button class="hover:text-gold-600" @click="startEdit(client)">Edit</button><button class="hover:text-gold-600" @click="runAction(client, 'passcode')">New code</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_open')">Unlock edits</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_locked')">Lock edits</button><button class="hover:text-gold-600" @click="setOverride(client, null)">Auto lock</button><button v-if="client.status === 'ACTIVE'" class="hover:text-gold-600" @click="runAction(client, 'archive')">Archive</button><button v-if="client.status !== 'DELETED'" class="text-red-700 hover:text-red-500" @click="runAction(client, 'delete')">Delete</button></div></td></tr></tbody>
           </table>
         </div>
         <div v-else class="mt-5 border border-dashed border-ink-900/20 bg-white px-6 py-16 text-center"><p class="font-display text-3xl">No clients here yet.</p><p class="mt-2 text-sm text-ink-700/60">Create a client to start a new invitation project.</p></div>

@@ -38,7 +38,7 @@ const formattedDate = computed(() =>
     </section>
 
     <section class="px-6 py-12">
-      <CountdownTimer :target="invitation.weddingDate" />
+      <CountdownTimer :target="invitation.weddingDate" :time-zone="invitation.weddingTz" />
     </section>
 
     <section class="mx-auto max-w-3xl px-6 py-12">

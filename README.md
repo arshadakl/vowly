@@ -62,6 +62,15 @@ To add a new template:
 
 The picker, preview, public page and OG renderer will pick it up automatically.
 
+## Public OG images
+
+Publish stores a versioned absolute OG URL and the Worker serves a branded SVG
+fallback at that URL. This intentionally avoids Satori/resvg WASM limits in the
+Worker. If raster images are required for a social platform, replace the OG
+handler boundary in `workers/api/src/routes/public-invitations.ts` with a
+Cloudflare-compatible renderer and R2 upload, retaining the same versioned URL
+contract. No extra configuration is required for the current SVG fallback.
+
 ## Scripts
 
 - `pnpm dev:web` — Nuxt dev server

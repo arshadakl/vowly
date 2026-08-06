@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { endOfWeddingDay, isInvitationLocked, tzOffsetMs } from './dates'
+import { endOfWeddingDay, isInvitationLocked, startOfLocalDate, tzOffsetMs } from './dates'
 
 describe('tzOffsetMs', () => {
   it('returns +05:30 for Asia/Kolkata', () => {
@@ -22,6 +22,12 @@ describe('endOfWeddingDay', () => {
   it('handles DST edge in America/New_York', () => {
     const end = endOfWeddingDay('2026-03-08', 'America/New_York')
     expect(end.toISOString()).toBe('2026-03-09T03:59:59.999Z')
+  })
+})
+
+describe('startOfLocalDate', () => {
+  it('uses local midnight rather than UTC midnight', () => {
+    expect(startOfLocalDate('2026-08-06', 'Asia/Kolkata').toISOString()).toBe('2026-08-05T18:30:00.000Z')
   })
 })
 

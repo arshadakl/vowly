@@ -14,6 +14,11 @@ export const invitationUpdateSchema = z.object({
   events: z.array(eventInputSchema).optional(),
 })
 
+export const editOverrideSchema = z.enum(EDIT_OVERRIDES)
+export const editOverrideUpdateSchema = z.object({
+  override: editOverrideSchema.nullable(),
+})
+
 export type InvitationUpdate = z.infer<typeof invitationUpdateSchema>
 
 export interface Invitation {

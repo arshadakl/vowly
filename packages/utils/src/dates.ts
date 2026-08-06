@@ -46,6 +46,15 @@ export function endOfWeddingDay(weddingDate: string, timeZone: string): Date {
   return new Date(naiveEnd - offset)
 }
 
+/** Convert a calendar date at local midnight into its UTC instant. */
+export function startOfLocalDate(date: string, timeZone: string): Date {
+  const [year, month, day] = date.split('-').map(Number)
+  const naive = Date.UTC(year!, month! - 1, day!)
+  let offset = tzOffsetMs(timeZone, new Date(naive))
+  offset = tzOffsetMs(timeZone, new Date(naive - offset))
+  return new Date(naive - offset)
+}
+
 /**
  * Determine whether an invitation should be read-only.
  * Admin overrides always win; otherwise it is locked after the end of the
