@@ -1,0 +1,3 @@
+import { apiError, requireAdmin } from '../../../utils/http'
+import { getEnv } from '../../../utils/env'
+export default defineEventHandler(async (event) => { await requireAdmin(event); const row = await getEnv(event).DB.prepare('SELECT * FROM clients WHERE id = ?').bind(getRouterParam(event, 'id')).first<Record<string, unknown>>(); if (!row) apiError('NOT_FOUND', 'Client not found.', 404); return { id: row.id, clientCode: row.client_code, name: row.name, phone: row.phone, passcode: row.passcode, status: row.status, weddingDate: row.wedding_date, weddingTz: row.wedding_tz, createdAt: row.created_at } })

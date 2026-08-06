@@ -11,13 +11,6 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  runtimeConfig: {
-    public: {
-      apiBase:
-        process.env.NUXT_PUBLIC_API_BASE ??
-        (process.env.NODE_ENV === 'development' ? 'http://localhost:8787' : ''),
-    },
-  },
   app: {
     head: {
       htmlAttrs: { lang: 'en' },
