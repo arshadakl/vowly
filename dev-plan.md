@@ -232,7 +232,7 @@ sessions(id TEXT PK, subject_type TEXT CHECK(subject_type IN ('admin','client'))
 --          events.invitation_id, rsvp.invitation_id, sessions.expires_at
 ```
 
-Migrations: `database/migrations/` via drizzle-kit. Applied to staging automatically,
+Migrations: `database/migrations/` via drizzle-kit. Applied to preview automatically,
 to prod only from `main` with confirmation.
 
 ---
@@ -244,7 +244,7 @@ to prod only from `main` with confirmation.
 
 | Milestone | Name | Estimate | Exit Criteria |
 |-----------|------|----------|---------------|
-| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt on Pages + Hono Worker on same domain `/api/*`, D1 migrated, R2/KV bound, Cloudflare preview deployment green. **Spike 1:** OG image renders on a real Worker. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
+| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt server routes + D1/R2/KV bindings, Cloudflare preview deployment green. **Spike 1:** OG image renders on the deployed runtime. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
 | **M1** | Admin Core | 4–5 d | Admin logs in/out; full client lifecycle (create → magic link → regenerate passcode → archive → delete); dashboard cards + search/filter/pagination; lockout triggers at 10 fails. |
 | **M2** | Client Editor | 6–8 d | Client logs in (passcode+phone, magic-link autofill); edits all invitation fields; unlimited sortable events CRUD; image upload (compress→R2); template picker; live preview with desktop/tablet/mobile toggle. |
 | **M3** | Templates, Publish & Public Page | 6–8 d | Classic + Luxury templates (presentation-only); one-click publish (slug gen + collision + OG + idempotent); public `/[slug]` with all spec §22 sections; countdown (tz-correct); QR; share; add-to-calendar; auto-lock + admin override + locked UI. |
@@ -264,13 +264,13 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 
 | ID | Task | Est | Depends |
 |----|------|-----|---------|
-| VOW-001 ◆ | pnpm monorepo scaffold (apps/web, workers/api, packages/{ui,types,utils}, database), shared tsconfig/eslint/prettier | 0.5 | — |
-| VOW-002 ◆ | Nuxt app + Tailwind + fontsource + base layout; deploy to Pages (staging) | 0.5 | 001 |
-| VOW-003 ◆ | Hono worker + health route; custom domain + `/api/*` route; Service Binding from Pages | 0.5–1 | 001 |
-| VOW-004 ◆ | D1 + drizzle-kit: spec schema + §3 deltas; migrate local + staging | 0.5 | 003 |
-| VOW-005 | R2 buckets + KV namespaces (staging/prod); wrangler config per env | 0.25 | 003 |
-| VOW-006 | Configure Cloudflare Git integrations for Pages previews and Workers Builds | 0.5 | 002–003 |
-| VOW-007 ◆ | **SPIKE:** workers-og renders 1200×630 JPEG ≤300 KB on a real deployed Worker | 0.5–1 | 003 |
+| VOW-001 ◆ | pnpm monorepo scaffold (apps/web, packages/{ui,types,utils}, database), shared tsconfig/eslint/prettier | 0.5 | — |
+| VOW-002 ◆ | Nuxt app + Tailwind + fontsource + `nitro-cloudflare-dev` + base layout | 0.5 | 001 |
+| VOW-003 ◆ | Root Pages/Worker Wrangler config with Nuxt server runtime and health route | 0.5–1 | 001 |
+| VOW-004 ◆ | D1 + drizzle-kit: spec schema + §4 deltas; migrate local + preview | 0.5 | 003 |
+| VOW-005 | R2 bucket + KV namespace bindings (preview/prod); root Wrangler config | 0.25 | 003 |
+| VOW-006 | Configure one Cloudflare Git build for Pages/Worker previews and production | 0.5 | 002–003 |
+| VOW-007 ◆ | **SPIKE:** OG image renders within the deployed Nuxt Worker runtime | 0.5–1 | 003 |
 | VOW-008 ◆ | **SPIKE:** Nuxt SSR dynamic OG tags verified via curl (no JS execution) | 0.25 | 002 |
 | VOW-009 | Seed script: create admin (PBKDF2-SHA-256) per env | 0.25 | 004 |
 
@@ -344,14 +344,14 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 **Pyramid (kept deliberately lean):**
 
 - **Unit (Vitest)** — `packages/utils` + `packages/types`: slug gen/collision, countdown math, lock-rule function, ics builder, passcode gen, all zod schemas. *These are pure and cheap; aim ~90% coverage here.*
-- **API integration (`@cloudflare/vitest-pool-workers`)** — real D1 locally: auth flows, lockout at 10, owner-scoping (client A cannot read/write client B — IDOR), publish transaction, RSVP limits.
+- **Server-route integration** — real local Cloudflare bindings: auth flows, lockout at 10, owner-scoping (client A cannot read/write client B — IDOR), publish transaction, RSVP limits.
 - **E2E (Playwright)** — ONE smoke suite, ~6 flows (VOW-046). Runs on `main` + pre-release, not per-PR.
 
 **Quality gates:**
 
 | Gate | When | Requirement |
 |------|------|-------------|
-| PR gate | Every PR | typecheck 0 errors, lint 0 warnings, unit+API tests green, preview deploy succeeds |
+| PR gate | Every PR | typecheck 0 errors, lint 0 warnings, unit+server-route tests green, preview deploy succeeds |
 | Milestone gate | End of each M | Exit criteria checklist (§4) reviewed and ticked |
 | Release gate | Before prod | E2E smoke green, Lighthouse mobile ≥ 90 on public page, manual a11y sweep, security pass (VOW-042) done |
 | Definition of Done | Every task | Responsive, typed, zod-validated server-side, errors handled, no `any`, works on 360px viewport |
@@ -361,16 +361,16 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 # 8. Cloudflare Deployments & Environments
 
 ```
-feature/* → PR → Cloudflare Pages preview deployment
-main      → merge → Cloudflare Pages production deployment + Workers Build deployment
+feature/* → PR → Cloudflare Pages/Worker preview deployment
+main      → merge → Cloudflare Pages/Worker production deployment
 ```
 
-- **Envs:** local / staging / prod — separate D1, R2, KV, secrets (`wrangler secret put`).
-- **Deployments:** managed by Cloudflare Git integrations; no GitHub Actions workflow is used.
+- **Envs:** local / preview / prod — separate D1, R2, KV, secrets (`wrangler secret put`).
+- **Deployment:** managed by one Cloudflare Git integration; no GitHub Actions workflow is used.
 - **Quality checks:** run `pnpm typecheck`, `pnpm lint` and `pnpm test` locally before pushing.
 - **Secrets** stay in Cloudflare Workers Secrets and Pages environment variables; never in the repo.
 - **Migrations** are one-way, numbered, never edited after merge.
-- **Rollback:** Pages instant rollback; Worker `wrangler rollback`; D1 via Time Travel.
+- **Rollback:** Cloudflare deployment rollback; D1 via Time Travel.
 
 ---
 
