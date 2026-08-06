@@ -64,6 +64,17 @@ pnpm --filter @vowly/api exec wrangler pages deploy ../../apps/web/dist --projec
 Set `NUXT_PUBLIC_API_BASE` to the staging API origin for preview/staging builds.
 Leave it empty in production after the same-zone `/api/*` route is configured.
 
+The Pages deploy command requires a Cloudflare API token in the build environment.
+Configure these values under the build project's variables/secrets:
+
+- `CLOUDFLARE_API_TOKEN` — secret token with **Account → Cloudflare Pages → Edit**
+  permission, restricted to the Vowly account.
+- `CLOUDFLARE_ACCOUNT_ID` — `69d7e5e3b8444560b5a95b46afce1828` if Cloudflare does
+  not provide the account automatically.
+
+If Wrangler reports API error `10000`, replace or rotate the token. Never commit or
+paste the token into the repository or issue logs.
+
 Never use local seed credentials in staging or production. Keep the first soft
 launch invitation unpublished until the complete flow has been checked.
 

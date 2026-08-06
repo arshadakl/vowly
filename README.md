@@ -103,3 +103,7 @@ For the Cloudflare Pages Git integration use:
 Replace `<PAGES_PROJECT_NAME>` with the exact Pages project name. Do not use
 `npx wrangler deploy`; that is the Worker deploy command. Deploy the API Worker
 separately through its Cloudflare Workers Build configuration.
+
+The Pages build also needs a `CLOUDFLARE_API_TOKEN` secret with **Account →
+Cloudflare Pages → Edit** permission. Add `CLOUDFLARE_ACCOUNT_ID` if the build
+does not provide the account automatically.
