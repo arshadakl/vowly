@@ -98,7 +98,7 @@ For the Cloudflare Pages Git integration use:
 
 - Build command: `pnpm --filter @vowly/web build`
 - Build output directory: `apps/web/dist`
-- Deploy command: `pnpm --filter @vowly/api exec wrangler pages deploy ../../apps/web/dist --project-name <PAGES_PROJECT_NAME>`
+- Deploy command: `pnpm exec wrangler pages deploy apps/web/dist --project-name <PAGES_PROJECT_NAME>`
 
 Replace `<PAGES_PROJECT_NAME>` with the exact Pages project name. Do not use
 `npx wrangler deploy`; that is the Worker deploy command. Deploy the API Worker
