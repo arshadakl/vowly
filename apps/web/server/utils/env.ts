@@ -1,10 +1,8 @@
 import type { H3Event } from 'h3'
-import type { D1Database, KVNamespace, R2Bucket } from '@cloudflare/workers-types'
+import type { D1Database } from '@cloudflare/workers-types'
 
 export interface RuntimeEnv {
   DB: D1Database
-  MEDIA: R2Bucket
-  RATE_LIMIT?: KVNamespace
   APP_NAME?: string
   ENVIRONMENT?: string
 }
