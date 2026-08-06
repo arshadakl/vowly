@@ -102,3 +102,12 @@ Unit tests live in `packages/utils/src/*.test.ts`. API integration tests will be
 added using `@cloudflare/vitest-pool-workers` in later milestones.
 
 Run tests with `pnpm test`.
+
+## Troubleshooting
+
+- `nuxi typecheck` may print a non-fatal warning about `vue-router/volar/sfc-route-blocks`.
+  This is a known upstream mismatch between the generated Nuxt types and the latest
+  vue-router exports. Typecheck still exits with code 0.
+- The Cloudflare Pages build may warn that `Node.js compatibility is not enabled`.
+  If you see runtime errors, enable the `nodejs_compat` compatibility flag in the
+  Pages project settings.
