@@ -19,6 +19,9 @@
     "db:migrate:local": "pnpm --filter @vowly/api db:migrate:local",
     "seed:admin:local": "tsx database/seed-admin.ts --local"
   },
+  "dependencies": {
+    "@vowly/utils": "workspace:*"
+  },
   "pnpm": {
     "overrides": {
       "vue-router": "4.4.5"
@@ -28,7 +31,6 @@
     "@eslint/js": "^9.39.0",
     "@types/node": "^26.1.2",
     "eslint": "^9.39.4",
-    "hash-wasm": "^4.12.0",
     "prettier": "^3.9.6",
     "tsx": "^4.23.9",
     "typescript": "^5.7.2",

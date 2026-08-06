@@ -38,6 +38,17 @@ Before logging in, seed an admin:
 pnpm seed:admin:local --username admin --password <strong-secret>
 ```
 
+For local testing, the seeded admin account is:
+
+- Admin login: `http://localhost:3000/x/login`
+- Username: `admin`
+- Password: `admin123`
+- Admin dashboard: `http://localhost:3000/x/dashboard`
+- Client login: `http://localhost:3000/login`
+
+The `admin123` credentials are for local development only. Use a strong password
+when seeding staging or production.
+
 ## Template system
 
 Templates are Vue components in `apps/web/app/components/templates/<id>/`. They

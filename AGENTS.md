@@ -27,6 +27,15 @@
 | `pnpm --filter @vowly/web build` | Production Nuxt build |
 | `pnpm --filter @vowly/api deploy` | Deploy API worker |
 
+## Local login routes
+
+- Client login: `http://localhost:3000/login`
+- Admin login: `http://localhost:3000/x/login`
+- Admin dashboard: `http://localhost:3000/x/dashboard`
+
+After applying local migrations, the default local test admin is `admin` / `admin123`.
+Never use those credentials outside local development.
+
 ## Conventions
 
 - **Commits** follow [Conventional Commits](https://www.conventionalcommits.org/):

@@ -1,10 +1,11 @@
-import { argon2id } from 'hash-wasm'
+import { hashPassword } from '@vowly/utils'
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { argv } from 'node:process'
 
 const API_DIR = resolve(import.meta.dirname, '../workers/api')
+const PNPM_COMMAND = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 
 function parseArgs() {
   const args = argv.slice(2)
@@ -39,15 +40,7 @@ if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
   process.exit(1)
 }
 
-const hash = await argon2id({
-  password,
-  salt: crypto.getRandomValues(new Uint8Array(16)),
-  parallelism: 1,
-  iterations: 2,
-  memorySize: 19456,
-  hashLength: 32,
-  outputType: 'encoded',
-})
+const hash = await hashPassword(password)
 
 const id = randomUUID()
 const sql =
@@ -59,13 +52,14 @@ const commandArgs = ['d1', 'execute', dbName, local ? '--local' : '--remote']
 if (env) {
   commandArgs.push('--env', env)
 }
-commandArgs.push('--config', 'wrangler.toml', '--command', sql)
+commandArgs.push('--config', 'wrangler.toml', '--command', JSON.stringify(sql))
 
 console.log(`Seeding admin "${username}" into ${local ? 'local' : 'remote'} database "${dbName}"...`)
 
 try {
-  const output = execFileSync('pnpm', ['exec', 'wrangler', ...commandArgs], {
+  const output = execFileSync(PNPM_COMMAND, ['exec', 'wrangler', ...commandArgs], {
     cwd: API_DIR,
+    shell: true,
     stdio: ['pipe', 'pipe', 'pipe'],
   })
   console.log(output.toString())

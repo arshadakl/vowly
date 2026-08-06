@@ -16,7 +16,7 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | # | Finding | Decision |
 |---|---------|----------|
 | S1 | Spec stores client `passcode` in DB with no mention of hashing. Admin must re-share magic links, so passcodes must be retrievable. | Store passcode **plaintext in D1** (documented trade-off), readable only via admin endpoints, never logged. V2: encrypt with a key held in Workers Secrets. |
-| S2 | Admin password hashing algorithm unspecified. bcrypt is not Workers-native. | **argon2id via `hash-wasm`** (WASM, runs on Workers). |
+| S2 | Admin password hashing algorithm unspecified. bcrypt and WASM Argon2 are not reliable in all Worker runtimes. | **PBKDF2-SHA-256 via WebCrypto** with 310,000 iterations and a random salt; native in Node and Cloudflare Workers. |
 | S3 | No session strategy in spec. | **Cookie sessions**: `__Host-session`, HttpOnly, Secure, SameSite=Lax. Token stored **SHA-256 hashed** in new `sessions` table. Admin TTL 12h, client TTL 30d sliding. Logout = row delete. |
 | S4 | "Use Cloudflare rate limiting" — the zone-level feature is plan-dependent and coarse. | Implement lockout ourselves in **Workers KV** (TTL built-in): key on passcode AND on IP. 10 fails → 15-min lock (spec says max 10; duration was undefined — now defined). |
 | S5 | Magic link `?key=PASSCODE` leaks via browser history, logs, screenshots. | Accepted as core UX. Mitigate: `Referrer-Policy: no-referrer` on auth pages, never log query strings, document the trade-off. |
@@ -83,7 +83,7 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | Same-origin routing | Custom domain; route `/api/*` to Worker on the same zone | Kills CORS entirely; first-party cookies. Validated in Phase 0. |
 | ORM/migrations | **Drizzle ORM + drizzle-kit** | D1-native, lightweight, SQL-first migrations. Prisma-on-Workers is heavier. |
 | Shared validation | Zod schemas live in `packages/types`, imported by both web forms and Hono | Single source of truth — spec's "no duplicated logic". |
-| Auth | Cookie sessions in D1 (see S3), argon2id admin password, plaintext retrievable passcodes | See §1.1. |
+| Auth | Cookie sessions in D1 (see S3), PBKDF2-SHA-256 admin password, plaintext retrievable passcodes | See §1.1. |
 | Rate limiting | Workers KV with TTL | See S4. |
 | OG images | `workers-og` → R2, versioned URLs, fallback default | See P1/P2. |
 | UI primitives | **Reka UI** (headless, accessible) + Tailwind; custom components in `packages/ui` | Luxury custom look without an opinionated kit; a11y for free on dialogs/dropdowns. |
@@ -159,7 +159,7 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 | VOW-006 | Configure Cloudflare Git integrations for Pages previews and Workers Builds | 0.5 | 002–003 |
 | VOW-007 ◆ | **SPIKE:** workers-og renders 1200×630 JPEG ≤300 KB on a real deployed Worker | 0.5–1 | 003 |
 | VOW-008 ◆ | **SPIKE:** Nuxt SSR dynamic OG tags verified via curl (no JS execution) | 0.25 | 002 |
-| VOW-009 | Seed script: create admin (argon2id) per env | 0.25 | 004 |
+| VOW-009 | Seed script: create admin (PBKDF2-SHA-256) per env | 0.25 | 004 |
 
 ## M1 — Admin Core (4–5 d)
 
