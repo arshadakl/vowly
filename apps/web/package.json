@@ -1,0 +1,32 @@
+{
+  "name": "@vowly/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxi typecheck",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/jost": "^5.3.0",
+    "@vowly/types": "workspace:*",
+    "@vowly/utils": "workspace:*",
+    "@vueuse/core": "^14.4.0",
+    "@vueuse/nuxt": "^14.4.0",
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "1.13.0",
+    "@tailwindcss/vite": "^4.1.10",
+    "eslint": "^9.39.4",
+    "tailwindcss": "^4.1.10",
+    "typescript": "^5.7.2",
+    "vue-tsc": "^3.3.9"
+  }
+}

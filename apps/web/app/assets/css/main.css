@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+@import '@fontsource/cormorant-garamond/400.css';
+@import '@fontsource/cormorant-garamond/500.css';
+@import '@fontsource/cormorant-garamond/600.css';
+@import '@fontsource/jost/300.css';
+@import '@fontsource/jost/400.css';
+@import '@fontsource/jost/500.css';
+
+@theme {
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Jost', system-ui, sans-serif;
+
+  --color-ivory-50: #fbf9f5;
+  --color-ivory-100: #f5f0e8;
+  --color-ivory-200: #efe7d7;
+  --color-gold-400: #d4af37;
+  --color-gold-500: #b08d57;
+  --color-gold-600: #8f6e3f;
+  --color-ink-700: #3d362c;
+  --color-ink-800: #2b2620;
+  --color-ink-900: #1c1813;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased text-ink-900 bg-ivory-50;
+  }
+}
