@@ -93,3 +93,12 @@ The repository defines local, staging, and production bindings, but does not
 create or configure real Cloudflare resources. Environment-specific variables,
 custom-domain routing, and the release sequence are documented in
 `docs/launch-readiness.md`.
+
+For the Cloudflare Pages Git integration use:
+
+- Build command: `pnpm --filter @vowly/web build`
+- Build output directory: `apps/web/dist`
+- Deploy command: leave empty
+
+Cloudflare Pages publishes the output directory automatically. Deploy the API
+Worker separately through its Cloudflare Workers Build configuration.

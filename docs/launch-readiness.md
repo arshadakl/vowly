@@ -38,6 +38,25 @@ without `--env` for production, from `workers/api`.
 8. Build Pages with an empty `NUXT_PUBLIC_API_BASE` and publish the intended artifact.
 9. Verify `/api/health`, admin login, one real invitation, and one RSVP end to end.
 
+## Cloudflare Pages Build Settings
+
+Configure the Pages project with these values:
+
+| Setting | Value |
+|---------|-------|
+| Root directory | `/` |
+| Build command | `pnpm --filter @vowly/web build` |
+| Build output directory | `apps/web/dist` |
+| Deploy command | **Empty** |
+
+Pages publishes the configured output directory automatically. Do not use
+`npx wrangler deploy` for the Pages project; that command is for Workers and will
+fail because Wrangler is a workspace dependency of the API package, not a root
+dependency. Deploy the API separately through the `vowly-api` Workers Build.
+
+Set `NUXT_PUBLIC_API_BASE` to the staging API origin for preview/staging builds.
+Leave it empty in production after the same-zone `/api/*` route is configured.
+
 Never use local seed credentials in staging or production. Keep the first soft
 launch invitation unpublished until the complete flow has been checked.
 
