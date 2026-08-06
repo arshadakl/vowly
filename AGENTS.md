@@ -20,12 +20,16 @@
 | `pnpm dev:api` | Wrangler dev server (http://localhost:8787) |
 | `pnpm db:generate` | Generate Drizzle migration SQL |
 | `pnpm db:migrate:local` | Apply migrations to local D1 |
+| `pnpm db:migrate:staging` | Apply migrations to staging D1 |
+| `pnpm db:migrate:prod` | Apply migrations to production D1 |
 | `pnpm seed:admin:local` | Seed an admin user locally |
+| `pnpm seed:admin:staging` / `pnpm seed:admin:prod` | Seed an admin remotely (strong password required) |
+| `pnpm api:dry-run` | Build/validate the Worker without deploying |
 | `pnpm typecheck` | Type-check everything |
 | `pnpm lint` | Lint TS and web files |
 | `pnpm test` | Run tests |
 | `pnpm --filter @vowly/web build` | Production Nuxt build |
-| `pnpm --filter @vowly/api deploy` | Deploy API worker |
+| `pnpm deploy:api:staging` / `pnpm deploy:api:prod` | Deploy API Worker to an environment |
 
 ## Local login routes
 
@@ -58,52 +62,12 @@ Never use those credentials outside local development.
 
 The template picker, preview, public page and OG generator will automatically pick it up.
 
-## Environment setup
+## Environment setup and operations
 
-1. Create the Cloudflare resources:
-
-```bash
-wrangler d1 create vowly-db
-wrangler kv:namespace create vowly-rate-limit
-wrangler r2 bucket create vowly-media
-```
-
-2. Copy the returned IDs into `workers/api/wrangler.toml` under the production
-   section (and create matching staging resources under `[env.staging]`).
-
-3. Push the production migration:
-
-```bash
-pnpm --filter @vowly/api db:migrate:prod
-```
-
-4. Seed the first admin:
-
-```bash
-pnpm seed:admin:remote --password <strong-secret>
-```
-
-5. Deploy the API worker:
-
-```bash
-pnpm --filter @vowly/api deploy
-```
-
-6. Build and deploy the web app to Cloudflare Pages:
-
-```bash
-pnpm --filter @vowly/web build
-```
-
-Upload the contents of `apps/web/.output/public` to your Pages project.
-
-For same-origin routing, add a Cloudflare route on `vowly.app/api/*` pointing to
-the `vowly-api` worker. The rest of the traffic serves Pages.
-
-## Staging
-
-Use the same steps with `--env staging` for `wrangler` commands and the staging
-resources created in `wrangler.toml`.
+Resource creation, environment variables, custom `/api/*` routing, release
+order, backups, monitoring, rollback, and the security launch checklist are
+maintained in `docs/launch-readiness.md`. Do not create real Cloudflare
+resources as part of local development or automated verification.
 
 ## Tests
 

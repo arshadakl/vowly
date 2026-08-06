@@ -17,7 +17,14 @@
     "format": "prettier --write .",
     "db:generate": "pnpm --filter @vowly/api db:generate",
     "db:migrate:local": "pnpm --filter @vowly/api db:migrate:local",
-    "seed:admin:local": "tsx database/seed-admin.ts --local"
+    "db:migrate:staging": "pnpm --filter @vowly/api db:migrate:staging",
+    "db:migrate:prod": "pnpm --filter @vowly/api db:migrate:prod",
+    "seed:admin:local": "tsx database/seed-admin.ts --local",
+    "seed:admin:staging": "tsx database/seed-admin.ts --remote --env staging --db vowly-db-staging",
+    "seed:admin:prod": "tsx database/seed-admin.ts --remote --db vowly-db",
+    "api:dry-run": "pnpm --filter @vowly/api dry-run",
+    "deploy:api:staging": "pnpm --filter @vowly/api deploy:staging",
+    "deploy:api:prod": "pnpm --filter @vowly/api deploy:production"
   },
   "dependencies": {
     "@vowly/utils": "workspace:*"
