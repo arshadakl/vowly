@@ -1,0 +1,17 @@
+node_modules
+.pnpm-store
+*.log
+.DS_Store
+dist
+.output
+.nuxt
+.data
+.wrangler
+.env
+.env.local
+.env.*.local
+.dev.vars
+coverage
+**/*.tsbuildinfo
+# generated at build time
+packages/types/*.d.ts
