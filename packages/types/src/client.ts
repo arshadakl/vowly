@@ -23,6 +23,18 @@ export type ClientUpdate = z.infer<typeof clientUpdateSchema>
 
 export const clientStatusSchema = z.enum(CLIENT_STATUSES)
 
+export const clientListQuerySchema = z.object({
+  search: z.string().trim().max(80).optional().default(''),
+  status: clientStatusSchema.or(z.literal('ALL')).optional().default('ACTIVE'),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+export type ClientListQuery = z.infer<typeof clientListQuerySchema>
+
+export const clientActionSchema = z.enum(['archive', 'delete', 'regenerate-passcode'])
+export type ClientAction = z.infer<typeof clientActionSchema>
+
 export interface Client {
   id: string
   clientCode: string

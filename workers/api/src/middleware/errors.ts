@@ -16,7 +16,8 @@ export const onError: ErrorHandler = (err, c) => {
     )
   }
 
-  console.error(err)
+  // Keep provider logs free of request data, tokens, and query strings.
+  console.error('Unhandled API error', err instanceof Error ? err.name : 'unknown')
 
   return c.json(
     { error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } },

@@ -6,7 +6,7 @@ compatibility_date = "2025-12-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "vowly-db"
-database_id = "00000000-0000-0000-0000-000000000000" # TODO: replace with `wrangler d1 create vowly-db`
+database_id = "f0072d7c-7499-4010-810e-e774f08401e0"
 migrations_dir = "../../database/migrations"
 
 [[r2_buckets]]

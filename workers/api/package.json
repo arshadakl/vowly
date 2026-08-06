@@ -6,11 +6,14 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env=\"\"",
+    "dry-run": "wrangler deploy --dry-run --env=\"\"",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply vowly-db --local",
     "db:migrate:staging": "wrangler d1 migrations apply vowly-db-staging --env staging --remote",
-    "db:migrate:prod": "wrangler d1 migrations apply vowly-db --remote"
+    "db:migrate:prod": "wrangler d1 migrations apply vowly-db --remote --env=\"\""
   },
   "dependencies": {
     "@vowly/types": "workspace:*",

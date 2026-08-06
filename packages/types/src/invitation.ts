@@ -11,7 +11,13 @@ export const invitationUpdateSchema = z.object({
   coverImage: z.string().max(500).nullable().optional(),
   brideImage: z.string().max(500).nullable().optional(),
   groomImage: z.string().max(500).nullable().optional(),
-  events: z.array(eventInputSchema).max(20).optional(),
+  rsvpEnabled: z.boolean().optional(),
+  events: z.array(eventInputSchema).optional(),
+})
+
+export const editOverrideSchema = z.enum(EDIT_OVERRIDES)
+export const editOverrideUpdateSchema = z.object({
+  override: editOverrideSchema.nullable(),
 })
 
 export type InvitationUpdate = z.infer<typeof invitationUpdateSchema>

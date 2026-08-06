@@ -16,6 +16,7 @@ Everything runs inside the Cloudflare edge.
 - `dev-plan.md` — technical development plan, milestones and risks
 - `AGENTS.md` — conventions for this codebase
 - `database/README.md` — migration and seed commands
+- `docs/launch-readiness.md` — staging/prod release, routing, backup, monitoring and security runbook
 
 ## Quick start
 
@@ -62,6 +63,15 @@ To add a new template:
 
 The picker, preview, public page and OG renderer will pick it up automatically.
 
+## Public OG images
+
+Publish stores a versioned absolute OG URL and the Worker serves a branded SVG
+fallback at that URL. This intentionally avoids Satori/resvg WASM limits in the
+Worker. If raster images are required for a social platform, replace the OG
+handler boundary in `workers/api/src/routes/public-invitations.ts` with a
+Cloudflare-compatible renderer and R2 upload, retaining the same versioned URL
+contract. No extra configuration is required for the current SVG fallback.
+
 ## Scripts
 
 - `pnpm dev:web` — Nuxt dev server
@@ -72,24 +82,14 @@ The picker, preview, public page and OG renderer will pick it up automatically.
 - `pnpm typecheck` — TypeScript check across all packages
 - `pnpm lint` — ESLint
 - `pnpm test` — run tests
+- `pnpm api:dry-run` — validate the Worker bundle without deploying
+- `pnpm db:migrate:staging` / `pnpm db:migrate:prod` — apply remote migrations
+- `pnpm seed:admin:staging` / `pnpm seed:admin:prod` — seed a remote admin
+- `pnpm deploy:api:staging` / `pnpm deploy:api:prod` — deploy the API Worker
 
 ## Environments
 
-Create real D1, R2 and KV resources and fill the IDs in
-`workers/api/wrangler.toml` before deploying to production or staging.
-
-```bash
-wrangler d1 create vowly-db
-wrangler kv:namespace create vowly-rate-limit
-wrangler r2 bucket create vowly-media
-```
-
-Then deploy:
-
-```bash
-pnpm --filter @vowly/api deploy --env production
-pnpm --filter @vowly/web build
-# Deploy the .output/public folder via Cloudflare Pages
-```
-
-Detailed deploy steps are in `AGENTS.md`.
+The repository defines local, staging, and production bindings, but does not
+create or configure real Cloudflare resources. Environment-specific variables,
+custom-domain routing, and the release sequence are documented in
+`docs/launch-readiness.md`.

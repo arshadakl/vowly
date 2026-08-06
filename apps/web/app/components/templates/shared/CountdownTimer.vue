@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { countdownParts } from '@vowly/utils'
+import { countdownParts, startOfLocalDate } from '@vowly/utils'
 
-const props = defineProps<{ target: string }>()
+const props = defineProps<{ target: string; timeZone?: string }>()
 
 const now = ref(Date.now())
 useIntervalFn(() => {
   now.value = Date.now()
 }, 1000)
 
-const parts = computed(() => countdownParts(props.target, now.value))
+const parts = computed(() => countdownParts(startOfLocalDate(props.target, props.timeZone ?? 'Asia/Kolkata'), now.value))
 </script>
 
 <template>

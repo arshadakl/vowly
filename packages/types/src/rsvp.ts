@@ -8,11 +8,31 @@ export const rsvpSubmitSchema = z.object({
   website: z.string().max(0).optional(), // honeypot — must stay empty
 })
 
+export const rsvpSettingsSchema = z.object({
+  enabled: z.boolean(),
+})
+
 export type RsvpSubmit = z.infer<typeof rsvpSubmitSchema>
 
 export interface RsvpRecord extends RsvpSubmit {
   id: string
   invitationId: string
+  createdAt: string
+}
+
+export interface RsvpSummary {
+  total: number
+  yes: number
+  no: number
+  maybe: number
+  guests: number
+}
+
+export interface RsvpListItem {
+  id: string
+  guestName: string
+  status: RsvpStatus
+  guestCount: number
   createdAt: string
 }
 

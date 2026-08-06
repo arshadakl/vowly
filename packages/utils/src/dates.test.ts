@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { endOfWeddingDay, isInvitationLocked, tzOffsetMs } from './dates'
+import { endOfWeddingDay, isInvitationLocked, startOfLocalDate, tzOffsetMs } from './dates'
 
 describe('tzOffsetMs', () => {
   it('returns +05:30 for Asia/Kolkata', () => {
@@ -25,6 +25,12 @@ describe('endOfWeddingDay', () => {
   })
 })
 
+describe('startOfLocalDate', () => {
+  it('uses local midnight rather than UTC midnight', () => {
+    expect(startOfLocalDate('2026-08-06', 'Asia/Kolkata').toISOString()).toBe('2026-08-05T18:30:00.000Z')
+  })
+})
+
 describe('isInvitationLocked', () => {
   it('is locked after the wedding day', () => {
     expect(
@@ -44,6 +50,16 @@ describe('isInvitationLocked', () => {
         now: new Date('2026-08-06T23:59:00+05:30'),
       }),
     ).toBe(false)
+  })
+
+  it('locks immediately after the local wedding day ends', () => {
+    expect(
+      isInvitationLocked({
+        weddingDate: '2026-08-06',
+        timeZone: 'Asia/Kolkata',
+        now: new Date('2026-08-06T18:30:00.001Z'),
+      }),
+    ).toBe(true)
   })
 
   it('force_open unlocks even after the wedding', () => {

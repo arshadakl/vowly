@@ -2,10 +2,9 @@ import { Hono } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import { adminLoginSchema } from '@vowly/types'
 import { verifyPassword } from '@vowly/utils'
-import type { Context } from 'hono'
 import type { Env } from '../lib/env'
+import { SESSION_COOKIE, getAdmin, hashToken } from '../lib/admin-session'
 
-const SESSION_COOKIE = 'vowly_session'
 const SESSION_TTL_SECONDS = 60 * 60 * 12
 
 interface AdminRow {
@@ -14,37 +13,7 @@ interface AdminRow {
   password_hash: string
 }
 
-interface SessionRow {
-  id: string
-  subject_id: string
-  expires_at: string
-}
-
 const app = new Hono<{ Bindings: Env }>()
-
-async function hashToken(token: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-}
-
-async function getAdmin(c: Context<{ Bindings: Env }>) {
-  const token = getCookie(c, SESSION_COOKIE)
-  if (!token) return null
-
-  const tokenHash = await hashToken(token)
-  const session = await c.env.DB.prepare(
-    `SELECT id, subject_id, expires_at FROM sessions
-     WHERE token_hash = ? AND subject_type = 'admin' AND expires_at > datetime('now')`,
-  )
-    .bind(tokenHash)
-    .first<SessionRow>()
-
-  if (!session) return null
-
-  return c.env.DB.prepare('SELECT id, username FROM admins WHERE id = ?')
-    .bind(session.subject_id)
-    .first<{ id: string; username: string }>()
-}
 
 app.post('/login', async (c) => {
   const parsed = adminLoginSchema.safeParse(await c.req.json().catch(() => null))
@@ -63,8 +32,8 @@ app.post('/login', async (c) => {
   if (admin) {
     try {
       passwordMatches = await verifyPassword(password, admin.password_hash)
-    } catch (error) {
-      console.error('Admin password verification failed', error instanceof Error ? error.message : 'unknown error')
+    } catch {
+      console.error('Admin password verification failed')
       return c.json({ error: { code: 'AUTH_UNAVAILABLE', message: 'Admin authentication is unavailable.' } }, 500)
     }
   }
