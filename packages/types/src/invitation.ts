@@ -11,7 +11,7 @@ export const invitationUpdateSchema = z.object({
   coverImage: z.string().max(500).nullable().optional(),
   brideImage: z.string().max(500).nullable().optional(),
   groomImage: z.string().max(500).nullable().optional(),
-  events: z.array(eventInputSchema).max(20).optional(),
+  events: z.array(eventInputSchema).optional(),
 })
 
 export type InvitationUpdate = z.infer<typeof invitationUpdateSchema>

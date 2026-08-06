@@ -30,3 +30,18 @@ export async function getAdmin(c: Context<{ Bindings: Env }>) {
     .bind(session.subject_id)
     .first<{ id: string; username: string }>()
 }
+
+export async function getClient(c: Context<{ Bindings: Env }>) {
+  const token = getCookie(c, SESSION_COOKIE)
+  if (!token) return null
+
+  const session = await c.env.DB.prepare(
+    `SELECT subject_id FROM sessions
+     WHERE token_hash = ? AND subject_type = 'client' AND expires_at > datetime('now')`,
+  )
+    .bind(await hashToken(token))
+    .first<SessionRow>()
+
+  if (!session) return null
+  return c.env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(session.subject_id).first()
+}

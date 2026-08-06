@@ -128,6 +128,9 @@ app.post('/', async (c) => {
     .bind(crypto.randomUUID(), clientCode, parsed.data.name, parsed.data.phone, passcode, parsed.data.weddingDate)
     .run()
 
+  const createdClient = await c.env.DB.prepare('SELECT id FROM clients WHERE client_code = ?').bind(clientCode).first<{ id: string }>()
+  await c.env.DB.prepare('INSERT INTO invitations (id, client_id) VALUES (?, ?)').bind(crypto.randomUUID(), createdClient!.id).run()
+
   const created = await c.env.DB.prepare('SELECT * FROM clients WHERE client_code = ?')
     .bind(clientCode)
     .first<ClientRow>()

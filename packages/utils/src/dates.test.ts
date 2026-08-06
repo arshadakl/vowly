@@ -46,6 +46,16 @@ describe('isInvitationLocked', () => {
     ).toBe(false)
   })
 
+  it('locks immediately after the local wedding day ends', () => {
+    expect(
+      isInvitationLocked({
+        weddingDate: '2026-08-06',
+        timeZone: 'Asia/Kolkata',
+        now: new Date('2026-08-06T18:30:00.001Z'),
+      }),
+    ).toBe(true)
+  })
+
   it('force_open unlocks even after the wedding', () => {
     expect(
       isInvitationLocked({
