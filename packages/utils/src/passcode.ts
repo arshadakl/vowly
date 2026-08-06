@@ -10,13 +10,15 @@ const PASSCODE_REGEX = new RegExp(`^[${PASSCODE_ALPHABET}]{6}$`)
  * Generate a cryptographically random, human-friendly passcode.
  * Uses rejection sampling to remove modulo bias.
  */
+const webCrypto = globalThis.crypto
+
 export function generatePasscode(length = PASSCODE_LENGTH, alphabet = PASSCODE_ALPHABET): string {
   const maxValid = Math.floor(256 / alphabet.length) * alphabet.length
   const result: string[] = []
   const buffer = new Uint8Array(length * 2)
 
   while (result.length < length) {
-    crypto.getRandomValues(buffer)
+    webCrypto.getRandomValues(buffer)
     for (const byte of buffer) {
       if (byte >= maxValid) continue
       result.push(alphabet[byte % alphabet.length]!)

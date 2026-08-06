@@ -15,8 +15,10 @@ function fromBase64Url(value: string): Uint8Array {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0))
 }
 
+const webCrypto = globalThis.crypto
+
 async function derivePasswordKey(password: string, salt: Uint8Array, iterations: number) {
-  const key = await crypto.subtle.importKey(
+  const key = await webCrypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
     'PBKDF2',
@@ -25,7 +27,7 @@ async function derivePasswordKey(password: string, salt: Uint8Array, iterations:
   )
 
   return new Uint8Array(
-    await crypto.subtle.deriveBits(
+    await webCrypto.subtle.deriveBits(
       { name: 'PBKDF2', hash: 'SHA-256', salt: salt as BufferSource, iterations },
       key,
       HASH_LENGTH,
@@ -34,7 +36,7 @@ async function derivePasswordKey(password: string, salt: Uint8Array, iterations:
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const salt = webCrypto.getRandomValues(new Uint8Array(16))
   const hash = await derivePasswordKey(password, salt, ITERATIONS)
   return `${PASSWORD_FORMAT}$${ITERATIONS}$${toBase64Url(salt)}$${toBase64Url(hash)}`
 }

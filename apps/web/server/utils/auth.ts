@@ -5,8 +5,10 @@ import { getEnv } from './env'
 export const SESSION_COOKIE = 'vowly_session'
 const SESSION_TTL = 60 * 60 * 24 * 7
 
+const webCrypto = globalThis.crypto
+
 export async function hashToken(token: string) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+  const digest = await webCrypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
@@ -21,9 +23,9 @@ export async function sessionSubject(event: H3Event, type: 'admin' | 'client') {
 }
 
 export async function createSession(event: H3Event, type: 'admin' | 'client', subjectId: string, ttl = SESSION_TTL) {
-  const token = crypto.randomUUID() + crypto.randomUUID()
+  const token = webCrypto.randomUUID() + webCrypto.randomUUID()
   const env = getEnv(event)
-  await env.DB.prepare(`INSERT INTO sessions (id, subject_type, subject_id, token_hash, expires_at, last_seen_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?)`).bind(crypto.randomUUID(), type, subjectId, await hashToken(token), new Date(Date.now() + ttl * 1000).toISOString(), getRequestHeader(event, 'CF-Connecting-IP') ?? null, getRequestHeader(event, 'User-Agent') ?? null).run()
+  await env.DB.prepare(`INSERT INTO sessions (id, subject_type, subject_id, token_hash, expires_at, last_seen_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?)`).bind(webCrypto.randomUUID(), type, subjectId, await hashToken(token), new Date(Date.now() + ttl * 1000).toISOString(), getRequestHeader(event, 'CF-Connecting-IP') ?? null, getRequestHeader(event, 'User-Agent') ?? null).run()
   setCookie(event, SESSION_COOKIE, token, { httpOnly: true, secure: getRequestURL(event).protocol === 'https:', sameSite: 'lax', path: '/', maxAge: ttl })
 }
 
