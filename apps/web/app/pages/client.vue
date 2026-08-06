@@ -23,14 +23,19 @@ const saving = ref(false)
 const errorMessage = ref<string | null>(null)
 const notice = ref<string | null>(null)
 const device = ref<'desktop' | 'tablet' | 'mobile'>('desktop')
+interface RsvpData { summary: { total: number; yes: number; no: number; maybe: number; guests: number }; items: Array<{ id: string; guestName: string; status: string; guestCount: number; createdAt: string }> }
+const rsvps = ref<RsvpData | null>(null)
+const rsvpLoading = ref(true)
 
 try {
   invitation.value = await api<EditorInvitation>('/client/invitation')
   draft.value = structuredClone(invitation.value)
+  rsvps.value = await api<RsvpData>('/client/invitation/rsvps')
 } catch {
   await navigateTo('/login')
 } finally {
   loading.value = false
+  rsvpLoading.value = false
 }
 
 const preview = computed<PublicInvitation | null>(() => {
@@ -90,6 +95,16 @@ async function setPublished(published: boolean) {
     notice.value = published ? `Published at /${result.slug}` : 'Invitation unpublished.'
   } catch (error: unknown) { errorMessage.value = error instanceof Error ? error.message : 'Could not change publishing status.' }
 }
+async function setRsvpEnabled(enabled: boolean) {
+  if (!draft.value || draft.value.locked) return
+  try {
+    await api('/client/invitation/rsvp', { method: 'PATCH', body: { enabled } })
+    draft.value.rsvpEnabled = enabled
+    notice.value = enabled ? 'RSVP is now open.' : 'RSVP is now closed.'
+  } catch (error: unknown) {
+    errorMessage.value = error instanceof Error ? error.message : 'Could not update RSVP settings.'
+  }
+}
 async function upload(field: 'coverImage' | 'brideImage' | 'groomImage', event: Event) {
   if (!draft.value || draft.value.locked) return
   const input = event.target as HTMLInputElement
@@ -122,7 +137,8 @@ async function logout() { await api('/auth/client/logout', { method: 'POST' }); 
           <label class="block text-sm">Quote<textarea v-model="draft.quote" :disabled="draft.locked" maxlength="300" rows="3" class="editor-input"/></label>
           <div><p class="text-sm">Template</p><div class="mt-2 grid grid-cols-2 gap-3"><button v-for="template in templateDefinitions" :key="template.id" :class="draft.template === template.id ? 'border-gold-500 bg-white' : 'border-ink-900/15 bg-transparent'" class="border p-4 text-left" :disabled="draft.locked" @click="draft.template = template.id"><span class="font-display text-xl">{{ template.name }}</span><span class="mt-1 block text-xs text-ink-700/70">{{ template.description }}</span></button></div></div>
           <div><p class="text-sm">Images</p><div class="mt-2 grid grid-cols-3 gap-2"><label v-for="field in (['coverImage', 'brideImage', 'groomImage'] as const)" :key="field" class="cursor-pointer border border-dashed border-ink-900/20 bg-white p-3 text-center text-[10px] uppercase tracking-wider"><span>{{ field.replace('Image', '') }}</span><input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" :disabled="draft.locked" @change="upload(field, $event)"></label></div></div>
-          <div><div class="flex items-center justify-between"><p class="text-sm">Events</p><button class="text-xs uppercase tracking-widest text-gold-600" :disabled="draft.locked" @click="addEvent">+ Add event</button></div><div v-for="(event, index) in draft.events" :key="event.id || index" class="mt-3 border border-ink-900/10 bg-white p-4"><div class="flex gap-2"><input v-model="event.title" :disabled="draft.locked" placeholder="Event title" class="editor-input flex-1"><button :disabled="draft.locked" class="text-xs" @click="removeEvent(index)">Remove</button></div><div class="mt-3 grid grid-cols-2 gap-2"><input v-model="event.eventDate" type="date" :disabled="draft.locked" class="editor-input"><input v-model="event.venue" :disabled="draft.locked" placeholder="Venue" class="editor-input"><input v-model="event.startTime" type="time" :disabled="draft.locked" class="editor-input"><input v-model="event.endTime" type="time" :disabled="draft.locked" class="editor-input"><input v-model="event.googleMapUrl" :disabled="draft.locked" placeholder="Google Maps URL" class="editor-input col-span-2"><input v-model="event.address" :disabled="draft.locked" placeholder="Address" class="editor-input col-span-2"><textarea v-model="event.notes" :disabled="draft.locked" placeholder="Notes" class="editor-input col-span-2"/></div><div class="mt-3 flex gap-3 text-xs"><button :disabled="index === 0 || draft.locked" @click="moveEvent(index, -1)">Move up</button><button :disabled="index === draft.events.length - 1 || draft.locked" @click="moveEvent(index, 1)">Move down</button></div></div></div>
+           <div><div class="flex items-center justify-between"><p class="text-sm">Events</p><button class="text-xs uppercase tracking-widest text-gold-600" :disabled="draft.locked" @click="addEvent">+ Add event</button></div><div v-for="(event, index) in draft.events" :key="event.id || index" class="mt-3 border border-ink-900/10 bg-white p-4"><div class="flex gap-2"><input v-model="event.title" :disabled="draft.locked" placeholder="Event title" class="editor-input flex-1"><button :disabled="draft.locked" class="text-xs" @click="removeEvent(index)">Remove</button></div><div class="mt-3 grid grid-cols-2 gap-2"><input v-model="event.eventDate" type="date" :disabled="draft.locked" class="editor-input"><input v-model="event.venue" :disabled="draft.locked" placeholder="Venue" class="editor-input"><input v-model="event.startTime" type="time" :disabled="draft.locked" class="editor-input"><input v-model="event.endTime" type="time" :disabled="draft.locked" class="editor-input"><input v-model="event.googleMapUrl" :disabled="draft.locked" placeholder="Google Maps URL" class="editor-input col-span-2"><input v-model="event.address" :disabled="draft.locked" placeholder="Address" class="editor-input col-span-2"><textarea v-model="event.notes" :disabled="draft.locked" placeholder="Notes" class="editor-input col-span-2"/></div><div class="mt-3 flex gap-3 text-xs"><button :disabled="index === 0 || draft.locked" @click="moveEvent(index, -1)">Move up</button><button :disabled="index === draft.events.length - 1 || draft.locked" @click="moveEvent(index, 1)">Move down</button></div></div></div>
+           <div class="border border-ink-900/10 bg-white p-4"><div class="flex items-center justify-between"><div><p class="text-sm font-medium">RSVPs</p><p class="mt-1 text-xs text-ink-700/70">{{ draft.rsvpEnabled ? 'Guests can respond from the invitation.' : 'RSVP form is hidden.' }}</p></div><button class="border border-gold-600 px-3 py-2 text-xs uppercase tracking-widest text-gold-700" :disabled="draft.locked" @click="setRsvpEnabled(!draft.rsvpEnabled)">{{ draft.rsvpEnabled ? 'Disable' : 'Enable' }}</button></div><div v-if="rsvpLoading" class="mt-4 text-xs text-ink-700/60">Loading responses...</div><div v-else-if="rsvps" class="mt-4 grid grid-cols-4 gap-2 text-center text-xs"><div><strong class="block text-xl">{{ rsvps.summary.total }}</strong>responses</div><div><strong class="block text-xl">{{ rsvps.summary.yes }}</strong>yes</div><div><strong class="block text-xl">{{ rsvps.summary.maybe }}</strong>maybe</div><div><strong class="block text-xl">{{ rsvps.summary.guests }}</strong>guests</div></div><p v-if="rsvps && !rsvps.items.length" class="mt-4 text-xs text-ink-700/60">No responses yet.</p><ul v-else-if="rsvps" class="mt-4 divide-y divide-ink-900/10 text-sm"><li v-for="item in rsvps.items" :key="item.id" class="flex justify-between py-2"><span>{{ item.guestName }} <small class="text-ink-700/60">({{ item.guestCount }})</small></span><span class="capitalize text-gold-700">{{ item.status }}</span></li></ul></div>
         </div>
          <div class="mt-7 grid gap-3 sm:grid-cols-2"><button class="bg-ink-900 py-4 text-xs uppercase tracking-[0.2em] text-white hover:bg-gold-600 disabled:opacity-40" :disabled="saving || draft.locked" @click="save">{{ saving ? 'Saving...' : 'Save invitation' }}</button><button class="border border-gold-600 py-4 text-xs uppercase tracking-[0.2em] text-gold-700 disabled:opacity-40" :disabled="draft.locked" @click="setPublished(!draft.published)">{{ draft.published ? 'Unpublish' : 'Publish invitation' }}</button></div>
          <p v-if="draft.published && draft.slug" class="mt-3 text-center text-xs text-ink-700">Public link: <a :href="`/${draft.slug}`" target="_blank" class="text-gold-700 underline">/{{ draft.slug }}</a></p>

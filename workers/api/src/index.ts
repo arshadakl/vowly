@@ -7,6 +7,7 @@ import clientAuth from './routes/client-auth'
 import clientEditor from './routes/client-editor'
 import publishing from './routes/publishing'
 import publicInvitations from './routes/public-invitations'
+import rsvps from './routes/rsvps'
 import { notFound, onError } from './middleware/errors'
 import type { Env } from './lib/env'
 
@@ -19,6 +20,14 @@ app.use(
     credentials: true,
   }),
 )
+app.use('*', async (c, next) => {
+  await next()
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('X-Frame-Options', 'DENY')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  c.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'")
+})
 app.route('/health', health)
 app.route('/auth/admin', adminAuth)
 app.route('/auth/client', clientAuth)
@@ -26,7 +35,10 @@ app.route('/admin/clients', adminClients)
 app.route('/client', clientEditor)
 app.route('/client', publishing)
 app.route('/public', publicInvitations)
+app.route('/public', rsvps)
+app.route('/client', rsvps)
 app.route('/admin', publishing)
+app.route('/admin', rsvps)
 
 app.notFound(notFound)
 app.onError(onError)

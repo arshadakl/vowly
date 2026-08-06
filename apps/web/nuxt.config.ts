@@ -25,7 +25,6 @@ export default defineNuxtConfig({
       title: 'Vowly',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'robots', content: 'noindex, nofollow' },
       ],
       link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     },

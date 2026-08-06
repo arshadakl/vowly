@@ -43,5 +43,6 @@ export async function getClient(c: Context<{ Bindings: Env }>) {
     .first<SessionRow>()
 
   if (!session) return null
-  return c.env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(session.subject_id).first()
+  return c.env.DB.prepare("SELECT * FROM clients WHERE id = ? AND status NOT IN ('DELETED', 'ARCHIVED')")
+    .bind(session.subject_id).first()
 }

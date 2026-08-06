@@ -26,6 +26,7 @@ interface ClientPage {
   pageSize: number
   stats: ClientStats
 }
+interface AdminRsvpData { summary: { total: number; yes: number; no: number; maybe: number; guests: number }; items: Array<{ id: string; guestName: string; status: string; guestCount: number }> }
 
 const api = useApi()
 const session = ref<AdminSession | null>(null)
@@ -40,6 +41,7 @@ const notice = ref<string | null>(null)
 const showCreate = ref(false)
 const editing = ref<Client | null>(null)
 const form = reactive({ name: '', phone: '', weddingDate: '' })
+const selectedRsvps = ref<{ client: Client; data: AdminRsvpData } | null>(null)
 
 try {
   session.value = await api<AdminSession>('/auth/admin/me')
@@ -125,6 +127,12 @@ async function setOverride(client: Client, override: 'force_open' | 'force_locke
     notice.value = `${client.name} edit lock updated.`
   } catch (error: unknown) { errorMessage.value = error instanceof Error ? error.message : 'Could not update edit lock.' }
 }
+async function showRsvps(client: Client) {
+  try {
+    const data = await api<AdminRsvpData>(`/admin/clients/${client.id}/invitation/rsvps`)
+    selectedRsvps.value = { client, data }
+  } catch (error: unknown) { errorMessage.value = error instanceof Error ? error.message : 'Could not load RSVPs.' }
+}
 </script>
 
 <template>
@@ -173,13 +181,15 @@ async function setOverride(client: Client, override: 'force_open' | 'force_locke
         <div v-else-if="clients?.items.length" class="mt-5 overflow-x-auto border border-ink-900/10 bg-white">
           <table class="w-full min-w-[720px] text-left text-sm">
             <thead class="border-b border-ink-900/10 bg-[#faf8f3] text-[10px] uppercase tracking-[0.18em] text-ink-700/60"><tr><th class="px-5 py-4">Client</th><th class="px-5 py-4">Wedding date</th><th class="px-5 py-4">Passcode</th><th class="px-5 py-4">Status</th><th class="px-5 py-4 text-right">Actions</th></tr></thead>
-            <tbody><tr v-for="client in clients.items" :key="client.id" class="border-b border-ink-900/10 last:border-0"><td class="px-5 py-5"><p class="font-medium">{{ client.name }}</p><p class="mt-1 text-xs text-ink-700/60">{{ client.clientCode }} · {{ client.phone }}</p></td><td class="px-5 py-5 text-ink-700">{{ client.weddingDate }}</td><td class="px-5 py-5 font-mono text-xs tracking-widest">{{ client.passcode }}</td><td class="px-5 py-5"><span class="border border-gold-500/40 px-2 py-1 text-[10px] uppercase tracking-widest text-gold-600">{{ client.status.replace('_', ' ') }}</span></td><td class="px-5 py-5"><div class="flex flex-wrap justify-end gap-3 text-xs text-ink-700"><button class="hover:text-gold-600" @click="startEdit(client)">Edit</button><button class="hover:text-gold-600" @click="runAction(client, 'passcode')">New code</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_open')">Unlock edits</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_locked')">Lock edits</button><button class="hover:text-gold-600" @click="setOverride(client, null)">Auto lock</button><button v-if="client.status === 'ACTIVE'" class="hover:text-gold-600" @click="runAction(client, 'archive')">Archive</button><button v-if="client.status !== 'DELETED'" class="text-red-700 hover:text-red-500" @click="runAction(client, 'delete')">Delete</button></div></td></tr></tbody>
+             <tbody><tr v-for="client in clients.items" :key="client.id" class="border-b border-ink-900/10 last:border-0"><td class="px-5 py-5"><p class="font-medium">{{ client.name }}</p><p class="mt-1 text-xs text-ink-700/60">{{ client.clientCode }} · {{ client.phone }}</p></td><td class="px-5 py-5 text-ink-700">{{ client.weddingDate }}</td><td class="px-5 py-5 font-mono text-xs tracking-widest">{{ client.passcode }}</td><td class="px-5 py-5"><span class="border border-gold-500/40 px-2 py-1 text-[10px] uppercase tracking-widest text-gold-600">{{ client.status.replace('_', ' ') }}</span></td><td class="px-5 py-5"><div class="flex flex-wrap justify-end gap-3 text-xs text-ink-700"><button class="hover:text-gold-600" @click="startEdit(client)">Edit</button><button class="hover:text-gold-600" @click="showRsvps(client)">RSVPs</button><button class="hover:text-gold-600" @click="runAction(client, 'passcode')">New code</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_open')">Unlock edits</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_locked')">Lock edits</button><button class="hover:text-gold-600" @click="setOverride(client, null)">Auto lock</button><button v-if="client.status === 'ACTIVE'" class="hover:text-gold-600" @click="runAction(client, 'archive')">Archive</button><button v-if="client.status !== 'DELETED'" class="text-red-700 hover:text-red-500" @click="runAction(client, 'delete')">Delete</button></div></td></tr></tbody>
           </table>
         </div>
         <div v-else class="mt-5 border border-dashed border-ink-900/20 bg-white px-6 py-16 text-center"><p class="font-display text-3xl">No clients here yet.</p><p class="mt-2 text-sm text-ink-700/60">Create a client to start a new invitation project.</p></div>
         <div v-if="clients && pageCount > 1" class="mt-5 flex items-center justify-between text-xs uppercase tracking-widest text-ink-700/70"><button :disabled="page === 1" class="disabled:opacity-30" @click="page--; loadClients()">Previous</button><span>Page {{ page }} of {{ pageCount }}</span><button :disabled="page === pageCount" class="disabled:opacity-30" @click="page++; loadClients()">Next</button></div>
-      </section>
+     </section>
     </main>
+
+    <div v-if="selectedRsvps" class="fixed inset-0 z-10 flex items-center justify-center bg-ink-900/50 px-5" @click.self="selectedRsvps = null"><section class="max-h-[80vh] w-full max-w-xl overflow-auto bg-[#f9f6ef] p-7 shadow-2xl"><div class="flex items-start justify-between"><div><p class="text-[10px] uppercase tracking-[0.24em] text-gold-600">Guest responses</p><h2 class="mt-2 font-display text-4xl">{{ selectedRsvps.client.name }}</h2></div><button aria-label="Close RSVP responses" class="text-xl" @click="selectedRsvps = null">×</button></div><div class="mt-6 grid grid-cols-4 gap-2 text-center text-xs"><div><strong class="block text-xl">{{ selectedRsvps.data.summary.total }}</strong>responses</div><div><strong class="block text-xl">{{ selectedRsvps.data.summary.yes }}</strong>yes</div><div><strong class="block text-xl">{{ selectedRsvps.data.summary.maybe }}</strong>maybe</div><div><strong class="block text-xl">{{ selectedRsvps.data.summary.guests }}</strong>guests</div></div><p v-if="!selectedRsvps.data.items.length" class="py-12 text-center text-sm text-ink-700/60">No responses yet.</p><ul v-else class="mt-6 divide-y divide-ink-900/10"><li v-for="item in selectedRsvps.data.items" :key="item.id" class="flex justify-between py-3 text-sm"><span>{{ item.guestName }} ({{ item.guestCount }})</span><span class="capitalize text-gold-700">{{ item.status }}</span></li></ul></section></div>
 
     <div v-if="showCreate" class="fixed inset-0 z-10 flex items-center justify-center bg-ink-900/50 px-5" @click.self="showCreate = false">
       <form class="w-full max-w-lg bg-[#f9f6ef] p-7 shadow-2xl sm:p-10" @submit.prevent="saveClient"><div class="flex items-start justify-between"><div><p class="text-[10px] uppercase tracking-[0.24em] text-gold-600">{{ editing ? 'Update record' : 'New project' }}</p><h2 class="mt-2 font-display text-4xl">{{ editing ? 'Edit client' : 'Add a client' }}</h2></div><button type="button" class="text-xl" aria-label="Close" @click="showCreate = false">×</button></div><div class="mt-8 space-y-4"><label class="block text-sm">Name<input v-model="form.name" required maxlength="80" class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500"></label><label class="block text-sm">Phone<input v-model="form.phone" required type="tel" class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500"></label><label class="block text-sm">Wedding date<input v-model="form.weddingDate" required type="date" class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500"></label></div><button class="mt-8 w-full bg-ink-900 py-3 text-xs uppercase tracking-[0.2em] text-white hover:bg-gold-600 disabled:opacity-50" :disabled="saving">{{ saving ? 'Saving...' : editing ? 'Save changes' : 'Create client' }}</button></form>

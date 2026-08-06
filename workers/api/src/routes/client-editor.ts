@@ -102,8 +102,8 @@ app.put('/invitation', async (c) => {
   const input = parsed.data
   const now = new Date().toISOString()
   const statements = [c.env.DB.prepare(
-    `UPDATE invitations SET bride_name = ?, groom_name = ?, quote = ?, template = ?, cover_image = ?, bride_image = ?, groom_image = ?, updated_at = ? WHERE id = ? AND client_id = ?`,
-  ).bind(input.brideName, input.groomName, input.quote ?? null, input.template, input.coverImage ?? null, input.brideImage ?? null, input.groomImage ?? null, now, invitation.id, client.id)]
+    `UPDATE invitations SET bride_name = ?, groom_name = ?, quote = ?, template = ?, cover_image = ?, bride_image = ?, groom_image = ?, rsvp_enabled = COALESCE(?, rsvp_enabled), updated_at = ? WHERE id = ? AND client_id = ?`,
+  ).bind(input.brideName, input.groomName, input.quote ?? null, input.template, input.coverImage ?? null, input.brideImage ?? null, input.groomImage ?? null, input.rsvpEnabled === undefined ? null : input.rsvpEnabled ? 1 : 0, now, invitation.id, client.id)]
   if (input.events) {
     statements.push(c.env.DB.prepare('DELETE FROM events WHERE invitation_id = ?').bind(invitation.id))
     for (const [index, event] of input.events.entries()) {

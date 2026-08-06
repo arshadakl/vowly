@@ -11,6 +11,7 @@ export const invitationUpdateSchema = z.object({
   coverImage: z.string().max(500).nullable().optional(),
   brideImage: z.string().max(500).nullable().optional(),
   groomImage: z.string().max(500).nullable().optional(),
+  rsvpEnabled: z.boolean().optional(),
   events: z.array(eventInputSchema).optional(),
 })
 

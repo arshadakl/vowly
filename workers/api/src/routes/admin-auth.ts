@@ -32,8 +32,8 @@ app.post('/login', async (c) => {
   if (admin) {
     try {
       passwordMatches = await verifyPassword(password, admin.password_hash)
-    } catch (error) {
-      console.error('Admin password verification failed', error instanceof Error ? error.message : 'unknown error')
+    } catch {
+      console.error('Admin password verification failed')
       return c.json({ error: { code: 'AUTH_UNAVAILABLE', message: 'Admin authentication is unavailable.' } }, 500)
     }
   }

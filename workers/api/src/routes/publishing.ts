@@ -59,7 +59,7 @@ app.post('/invitation/unpublish', async (c) => {
   return c.json({ published: false })
 })
 
-app.post('/admin/clients/:id/invitation/override', async (c) => {
+app.post('/clients/:id/invitation/override', async (c) => {
   const admin = await getAdmin(c)
   if (!admin) return c.json({ error: { code: 'UNAUTHENTICATED', message: 'Admin login required.' } }, 401)
   const parsed = editOverrideUpdateSchema.safeParse(await c.req.json().catch(() => null))
