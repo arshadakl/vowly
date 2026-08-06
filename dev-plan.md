@@ -92,7 +92,7 @@ The spec is strong. These are the gaps/risks a senior review catches. Each has a
 | Fonts | Self-hosted via `@fontsource` | No render-blocking third-party CSS; premium typography is core to the product. |
 | Image uploads | Client-side compress (browser-image-compression) → presigned R2 PUT via Worker | Validates mime + ≤5 MB server-side. No images through the Worker body. |
 | Testing | Vitest (unit) + `@cloudflare/vitest-pool-workers` (API) + Playwright smoke (e2e) | See §6. |
-| CI/CD | GitHub Actions → Pages previews + wrangler deploys | See §7. |
+| Deployment | Cloudflare Git integrations for Pages and Workers Builds | Cloudflare owns preview and production deployments; local quality commands remain available. |
 
 **Non-negotiables carried from spec:** strict TS, ESLint+Prettier, Zod on every
 request, proper HTTP codes, never trust frontend input, mobile-first, 2 templates max in V1.
@@ -131,7 +131,7 @@ to prod only from `main` with confirmation.
 
 | Milestone | Name | Estimate | Exit Criteria |
 |-----------|------|----------|---------------|
-| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt on Pages + Hono Worker on same domain `/api/*`, D1 migrated, R2/KV bound, CI green. **Spike 1:** OG image renders on a real Worker. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
+| **M0** | Foundations & Risk Spikes | 3–4 d | Hello-world deployed full-path: Nuxt on Pages + Hono Worker on same domain `/api/*`, D1 migrated, R2/KV bound, Cloudflare preview deployment green. **Spike 1:** OG image renders on a real Worker. **Spike 2:** SSR page emits per-invitation OG tags readable by a crawler (curl test). |
 | **M1** | Admin Core | 4–5 d | Admin logs in/out; full client lifecycle (create → magic link → regenerate passcode → archive → delete); dashboard cards + search/filter/pagination; lockout triggers at 10 fails. |
 | **M2** | Client Editor | 6–8 d | Client logs in (passcode+phone, magic-link autofill); edits all invitation fields; unlimited sortable events CRUD; image upload (compress→R2); template picker; live preview with desktop/tablet/mobile toggle. |
 | **M3** | Templates, Publish & Public Page | 6–8 d | Classic + Luxury templates (presentation-only); one-click publish (slug gen + collision + OG + idempotent); public `/[slug]` with all spec §22 sections; countdown (tz-correct); QR; share; add-to-calendar; auto-lock + admin override + locked UI. |
@@ -156,7 +156,7 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 | VOW-003 ◆ | Hono worker + health route; custom domain + `/api/*` route; Service Binding from Pages | 0.5–1 | 001 |
 | VOW-004 ◆ | D1 + drizzle-kit: spec schema + §3 deltas; migrate local + staging | 0.5 | 003 |
 | VOW-005 | R2 buckets + KV namespaces (staging/prod); wrangler config per env | 0.25 | 003 |
-| VOW-006 | CI: GitHub Actions — install, typecheck, lint, unit tests, preview deploy | 0.5 | 002–003 |
+| VOW-006 | Configure Cloudflare Git integrations for Pages previews and Workers Builds | 0.5 | 002–003 |
 | VOW-007 ◆ | **SPIKE:** workers-og renders 1200×630 JPEG ≤300 KB on a real deployed Worker | 0.5–1 | 003 |
 | VOW-008 ◆ | **SPIKE:** Nuxt SSR dynamic OG tags verified via curl (no JS execution) | 0.25 | 002 |
 | VOW-009 | Seed script: create admin (argon2id) per env | 0.25 | 004 |
@@ -245,16 +245,17 @@ Ticket format `VOW-###`. `◆` = on the critical path.
 
 ---
 
-# 7. CI/CD & Environments
+# 7. Cloudflare Deployments & Environments
 
 ```
-feature/* → PR → [typecheck, lint, unit+api tests] → Pages preview + staging API
-main      → merge → deploy web (Pages prod) + api (Workers prod)
-                  → drizzle migrate staging (auto), prod (manual approve)
+feature/* → PR → Cloudflare Pages preview deployment
+main      → merge → Cloudflare Pages production deployment + Workers Build deployment
 ```
 
 - **Envs:** local / staging / prod — separate D1, R2, KV, secrets (`wrangler secret put`).
-- **Secrets** in GitHub Actions + Workers Secrets; never in repo.
+- **Deployments:** managed by Cloudflare Git integrations; no GitHub Actions workflow is used.
+- **Quality checks:** run `pnpm typecheck`, `pnpm lint` and `pnpm test` locally before pushing.
+- **Secrets** stay in Cloudflare Workers Secrets and Pages environment variables; never in the repo.
 - **Migrations** are one-way, numbered, never edited after merge.
 - **Rollback:** Pages instant rollback; Worker `wrangler rollback`; D1 via Time Travel.
 
@@ -273,7 +274,7 @@ main      → merge → deploy web (Pages prod) + api (Workers prod)
 | R7 | Scope creep (extra templates, gallery, music) | H | Schedule death | Spec §30 is frozen; anything new → V2 backlog, no exceptions mid-milestone |
 | R8 | D1 migration mistake in prod | L | Data loss | Staging-first applies, weekly exports + Time Travel (VOW-052) |
 | R9 | Phone-camera images huge/slow uploads | M | Editor feels broken | Client-side compression + 5 MB cap (VOW-024) |
-| R10 | Solo-dev bus factor | M | Project stalls | AGENTS.md runbook, CI-driven deploys, no manual release steps (VOW-055) |
+| R10 | Solo-dev bus factor | M | Project stalls | AGENTS.md runbook, Cloudflare-managed deployments, and documented local quality checks (VOW-055) |
 
 ---
 
