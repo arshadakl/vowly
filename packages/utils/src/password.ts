@@ -1,5 +1,5 @@
 const PASSWORD_FORMAT = 'pbkdf2-sha256'
-const ITERATIONS = 310_000
+const ITERATIONS = 100_000
 const HASH_LENGTH = 256
 
 function toBase64Url(bytes: Uint8Array): string {
