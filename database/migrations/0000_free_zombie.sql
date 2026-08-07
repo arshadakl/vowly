@@ -2,7 +2,7 @@ CREATE TABLE `admins` (
 	`id` text PRIMARY KEY NOT NULL,
 	`username` text NOT NULL,
 	`password_hash` text NOT NULL,
-	`created_at` text DEFAULT 'CURRENT_TIMESTAMP' NOT NULL
+`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `admins_username_unique` ON `admins` (`username`);--> statement-breakpoint
@@ -15,7 +15,7 @@ CREATE TABLE `clients` (
 	`status` text DEFAULT 'ACTIVE' NOT NULL,
 	`wedding_date` text NOT NULL,
 	`wedding_tz` text DEFAULT 'Asia/Kolkata' NOT NULL,
-	`created_at` text DEFAULT 'CURRENT_TIMESTAMP' NOT NULL
+`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `clients_client_code_unique` ON `clients` (`client_code`);--> statement-breakpoint
@@ -54,14 +54,13 @@ CREATE TABLE `invitations` (
 	`published` integer DEFAULT false NOT NULL,
 	`published_at` text,
 	`og_image_url` text,
-	`created_at` text DEFAULT 'CURRENT_TIMESTAMP' NOT NULL,
-	`updated_at` text DEFAULT 'CURRENT_TIMESTAMP' NOT NULL,
+`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `invitations_client_id_unique` ON `invitations` (`client_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `invitations_slug_unique` ON `invitations` (`slug`);--> statement-breakpoint
-CREATE UNIQUE INDEX `idx_invitations_slug` ON `invitations` (`slug`);--> statement-breakpoint
 CREATE INDEX `idx_invitations_published` ON `invitations` (`published`);--> statement-breakpoint
 CREATE TABLE `rsvps` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -69,7 +68,7 @@ CREATE TABLE `rsvps` (
 	`guest_name` text NOT NULL,
 	`status` text NOT NULL,
 	`guest_count` integer DEFAULT 1 NOT NULL,
-	`created_at` text DEFAULT 'CURRENT_TIMESTAMP' NOT NULL,
+`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	FOREIGN KEY (`invitation_id`) REFERENCES `invitations`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -79,7 +78,7 @@ CREATE TABLE `sessions` (
 	`subject_type` text NOT NULL,
 	`subject_id` text NOT NULL,
 	`token_hash` text NOT NULL,
-	`created_at` text DEFAULT 'CURRENT_TIMESTAMP' NOT NULL,
+ `created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`expires_at` text NOT NULL,
 	`last_seen_at` text,
 	`ip` text,

@@ -1,0 +1,1 @@
+ALTER TABLE `invitations` ADD `show_images` integer DEFAULT false NOT NULL;
