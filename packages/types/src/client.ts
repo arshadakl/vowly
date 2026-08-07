@@ -45,4 +45,9 @@ export interface Client {
   weddingDate: string
   weddingTz: string
   createdAt: string
+  invitation?: {
+    created: boolean
+    published: boolean
+    slug: string | null
+  }
 }

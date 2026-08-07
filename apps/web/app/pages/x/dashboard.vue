@@ -42,6 +42,11 @@ const showCreate = ref(false)
 const editing = ref<Client | null>(null)
 const form = reactive({ name: '', phone: '', weddingDate: '' })
 const selectedRsvps = ref<{ client: Client; data: AdminRsvpData } | null>(null)
+const openMenu = ref<string | null>(null)
+
+function toggleMenu(clientId: string) {
+  openMenu.value = openMenu.value === clientId ? null : clientId
+}
 
 try {
   session.value = await api<AdminSession>('/auth/admin/me')
@@ -85,6 +90,16 @@ async function runAction(client: Client, action: 'archive' | 'delete' | 'passcod
   }
 }
 
+async function copyShareLink(client: Client) {
+  const url = `${window.location.origin}/login?key=${client.passcode}`
+  try {
+    await navigator.clipboard?.writeText(url)
+    notice.value = `Share link copied: ${url}`
+  } catch {
+    errorMessage.value = 'Could not copy the link.'
+  }
+}
+
 function startCreate() {
   editing.value = null
   Object.assign(form, { name: '', phone: '', weddingDate: '' })
@@ -106,7 +121,9 @@ async function saveClient() {
       notice.value = 'Client details updated.'
     } else {
       const created = await api<Client>('/admin/clients', { method: 'POST', body: form })
-      notice.value = `${created.clientCode} created. Passcode: ${created.passcode}`
+      const url = `${window.location.origin}/login?key=${created.passcode}`
+      notice.value = `${created.clientCode} created. Share link: ${url}`
+      await navigator.clipboard?.writeText(url)
     }
     showCreate.value = false
     await loadClients()
@@ -179,9 +196,9 @@ async function showRsvps(client: Client) {
 
         <div v-if="loading" class="py-16 text-center text-sm text-ink-700/60">Loading clients...</div>
         <div v-else-if="clients?.items.length" class="mt-5 overflow-x-auto border border-ink-900/10 bg-white">
-          <table class="w-full min-w-[720px] text-left text-sm">
-            <thead class="border-b border-ink-900/10 bg-[#faf8f3] text-[10px] uppercase tracking-[0.18em] text-ink-700/60"><tr><th class="px-5 py-4">Client</th><th class="px-5 py-4">Wedding date</th><th class="px-5 py-4">Passcode</th><th class="px-5 py-4">Status</th><th class="px-5 py-4 text-right">Actions</th></tr></thead>
-             <tbody><tr v-for="client in clients.items" :key="client.id" class="border-b border-ink-900/10 last:border-0"><td class="px-5 py-5"><p class="font-medium">{{ client.name }}</p><p class="mt-1 text-xs text-ink-700/60">{{ client.clientCode }} · {{ client.phone }}</p></td><td class="px-5 py-5 text-ink-700">{{ client.weddingDate }}</td><td class="px-5 py-5 font-mono text-xs tracking-widest">{{ client.passcode }}</td><td class="px-5 py-5"><span class="border border-gold-500/40 px-2 py-1 text-[10px] uppercase tracking-widest text-gold-600">{{ client.status.replace('_', ' ') }}</span></td><td class="px-5 py-5"><div class="flex flex-wrap justify-end gap-3 text-xs text-ink-700"><button class="hover:text-gold-600" @click="startEdit(client)">Edit</button><button class="hover:text-gold-600" @click="showRsvps(client)">RSVPs</button><button class="hover:text-gold-600" @click="runAction(client, 'passcode')">New code</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_open')">Unlock edits</button><button class="hover:text-gold-600" @click="setOverride(client, 'force_locked')">Lock edits</button><button class="hover:text-gold-600" @click="setOverride(client, null)">Auto lock</button><button v-if="client.status === 'ACTIVE'" class="hover:text-gold-600" @click="runAction(client, 'archive')">Archive</button><button v-if="client.status !== 'DELETED'" class="text-red-700 hover:text-red-500" @click="runAction(client, 'delete')">Delete</button></div></td></tr></tbody>
+          <table class="w-full min-w-[820px] text-left text-sm">
+            <thead class="border-b border-ink-900/10 bg-[#faf8f3] text-[10px] uppercase tracking-[0.18em] text-ink-700/60"><tr><th class="px-5 py-4">Client</th><th class="px-5 py-4">Wedding date</th><th class="px-5 py-4">Invitation</th><th class="px-5 py-4">Passcode</th><th class="px-5 py-4">Status</th><th class="px-5 py-4 text-right">Actions</th></tr></thead>
+             <tbody><tr v-for="client in clients.items" :key="client.id" class="border-b border-ink-900/10 last:border-0"><td class="px-5 py-5"><p class="font-medium">{{ client.name }}</p><p class="mt-1 text-xs text-ink-700/60">{{ client.clientCode }} · {{ client.phone }}</p></td><td class="px-5 py-5 text-ink-700">{{ client.weddingDate }}</td><td class="px-5 py-5"><span class="border border-gold-500/40 px-2 py-1 text-[10px] uppercase tracking-widest text-gold-600">{{ client.invitation?.published ? 'Published' : client.invitation?.created ? 'Created' : 'Not created' }}</span><NuxtLink v-if="client.invitation?.slug" :to="`/${client.invitation.slug}`" target="_blank" class="ml-2 text-gold-600 underline">Open</NuxtLink><NuxtLink v-else-if="client.invitation?.created" :to="`/x/preview/${client.id}`" target="_blank" class="ml-2 text-gold-600 underline">Preview</NuxtLink></td><td class="px-5 py-5 font-mono text-xs tracking-widest">{{ client.passcode }}</td><td class="px-5 py-5"><span class="border border-gold-500/40 px-2 py-1 text-[10px] uppercase tracking-widest text-gold-600">{{ client.status.replace('_', ' ') }}</span></td><td class="px-5 py-5"><div class="flex items-center justify-end gap-3 text-xs text-ink-700"><NuxtLink :to="`/x/preview/${client.id}`" target="_blank" class="hover:text-gold-600">Preview</NuxtLink><button class="hover:text-gold-600" @click="copyShareLink(client)">Share</button><div class="relative"><button class="flex h-8 w-8 items-center justify-center rounded-full border border-ink-900/15 hover:border-gold-500" aria-label="More actions" @click="toggleMenu(client.id)">⋯</button><div v-if="openMenu === client.id" class="absolute right-0 top-10 z-10 w-44 border border-ink-900/10 bg-white py-1 text-left shadow-xl"><button class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="startEdit(client); openMenu = null">Edit</button><button class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="showRsvps(client); openMenu = null">RSVPs</button><button class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="copyShareLink(client); openMenu = null">Share link</button><button class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="runAction(client, 'passcode'); openMenu = null">New code</button><button class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="setOverride(client, 'force_open'); openMenu = null">Unlock edits</button><button class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="setOverride(client, 'force_locked'); openMenu = null">Lock edits</button><button class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="setOverride(client, null); openMenu = null">Auto lock</button><button v-if="client.status === 'ACTIVE'" class="block w-full px-4 py-2 text-left hover:bg-[#faf8f3]" @click="runAction(client, 'archive'); openMenu = null">Archive</button><button v-if="client.status !== 'DELETED'" class="block w-full px-4 py-2 text-left text-red-700 hover:bg-red-50" @click="runAction(client, 'delete'); openMenu = null">Delete</button></div></div></div></td></tr></tbody>
           </table>
         </div>
         <div v-else class="mt-5 border border-dashed border-ink-900/20 bg-white px-6 py-16 text-center"><p class="font-display text-3xl">No clients here yet.</p><p class="mt-2 text-sm text-ink-700/60">Create a client to start a new invitation project.</p></div>
