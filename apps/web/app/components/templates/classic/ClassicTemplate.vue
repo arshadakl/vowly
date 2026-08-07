@@ -27,7 +27,7 @@ const formattedDate = computed(() =>
         <p class="text-sm uppercase tracking-[0.25em] text-gold-600">Wedding Invitation</p>
         <h1 class="mt-4 font-display text-5xl font-medium md:text-7xl">
           {{ invitation.brideName }}
-          <span class="mx-3 text-gold-500">&</span>
+          <span class="mx-3 text-gold-500">&amp;</span>
           {{ invitation.groomName }}
         </h1>
         <p v-if="invitation.quote" class="mt-6 font-display text-xl italic text-ink-700">
@@ -61,13 +61,13 @@ const formattedDate = computed(() =>
             <div class="mt-3 flex flex-wrap gap-2">
               <button
                 v-if="event.googleMapUrl"
-                class="rounded-full border border-ink-800/20 px-4 py-2 text-sm hover:bg-ink-800 hover:text-white transition-colors"
+                class="rounded-full border border-ink-800/20 px-4 py-2 text-sm transition-colors hover:bg-ink-800 hover:text-white"
                 @click="openMap(event)"
               >
                 Open in Google Maps
               </button>
               <button
-                class="rounded-full border border-ink-800/20 px-4 py-2 text-sm hover:bg-ink-800 hover:text-white transition-colors"
+                class="rounded-full border border-ink-800/20 px-4 py-2 text-sm transition-colors hover:bg-ink-800 hover:text-white"
                 @click="copy(addressText(event))"
               >
                 {{ copied ? 'Copied!' : 'Copy Address' }}
@@ -79,8 +79,6 @@ const formattedDate = computed(() =>
       </div>
     </section>
 
-    <div class="px-6">
-      <PhotographyFooter :studio="invitation.studio" />
-    </div>
+    <div class="px-6"><PhotographyFooter :studio="invitation.studio" /></div>
   </article>
 </template>

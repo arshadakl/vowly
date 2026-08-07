@@ -8,18 +8,20 @@ useIntervalFn(() => {
   now.value = Date.now()
 }, 1000)
 
-const parts = computed(() => countdownParts(startOfLocalDate(props.target, props.timeZone ?? 'Asia/Kolkata'), now.value))
+const parts = computed(() =>
+  countdownParts(startOfLocalDate(props.target, props.timeZone ?? 'Asia/Kolkata'), now.value),
+)
 </script>
 
 <template>
   <div class="text-center">
     <template v-if="parts.ended">
-      <p class="font-display text-2xl md:text-3xl text-ink-800">
+      <p class="font-display text-2xl text-ink-800 md:text-3xl">
         Thank you for celebrating with us ❤️
       </p>
     </template>
     <template v-else>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-md mx-auto">
+      <div class="mx-auto grid max-w-md grid-cols-2 gap-4 md:grid-cols-4">
         <div
           v-for="item in [
             { value: parts.days, label: 'Days' },

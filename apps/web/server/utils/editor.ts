@@ -5,7 +5,7 @@ import type { H3Event } from 'h3'
 
 interface InvitationDbRow {
   id: string; client_id: string; bride_name: string; groom_name: string; slug: string | null; template: string
-  cover_image: string | null; bride_image: string | null; groom_image: string | null; quote: string | null
+   cover_image: string | null; bride_image: string | null; groom_image: string | null; show_images: boolean; quote: string | null
   edit_override: 'force_open' | 'force_locked' | null; rsvp_enabled: boolean; published: boolean
   published_at: string | null; og_image_url: string | null; created_at: string; updated_at: string
 }
@@ -20,7 +20,7 @@ export async function editorContext(event: H3Event) {
 
 export async function presentEditor(event: H3Event, context: Awaited<ReturnType<typeof editorContext>>) {
   const rows = await getEnv(event).DB.prepare('SELECT * FROM events WHERE invitation_id = ? ORDER BY sort_order, id').bind(context.invitation.id).all<EventDbRow>()
-  return { id: context.invitation.id, clientId: context.invitation.client_id, brideName: context.invitation.bride_name, groomName: context.invitation.groom_name, slug: context.invitation.slug, template: context.invitation.template, coverImage: context.invitation.cover_image, brideImage: context.invitation.bride_image, groomImage: context.invitation.groom_image, quote: context.invitation.quote, editOverride: context.invitation.edit_override, rsvpEnabled: Boolean(context.invitation.rsvp_enabled), published: Boolean(context.invitation.published), publishedAt: context.invitation.published_at, ogImageUrl: context.invitation.og_image_url, createdAt: context.invitation.created_at, updatedAt: context.invitation.updated_at, weddingDate: context.client.wedding_date, weddingTz: context.client.wedding_tz, locked: context.locked, events: rows.results.map((item) => ({ id: item.id, invitationId: item.invitation_id, title: item.title, eventDate: item.event_date, startTime: item.start_time, endTime: item.end_time, venue: item.venue, googleMapUrl: item.google_map, address: item.address, notes: item.notes, sortOrder: item.sort_order })) }
+   return { id: context.invitation.id, clientId: context.invitation.client_id, brideName: context.invitation.bride_name, groomName: context.invitation.groom_name, slug: context.invitation.slug, template: context.invitation.template, coverImage: context.invitation.cover_image, brideImage: context.invitation.bride_image, groomImage: context.invitation.groom_image, showImages: Boolean(context.invitation.show_images), quote: context.invitation.quote, editOverride: context.invitation.edit_override, rsvpEnabled: Boolean(context.invitation.rsvp_enabled), published: Boolean(context.invitation.published), publishedAt: context.invitation.published_at, ogImageUrl: context.invitation.og_image_url, createdAt: context.invitation.created_at, updatedAt: context.invitation.updated_at, weddingDate: context.client.wedding_date, weddingTz: context.client.wedding_tz, locked: context.locked, events: rows.results.map((item) => ({ id: item.id, invitationId: item.invitation_id, title: item.title, eventDate: item.event_date, startTime: item.start_time, endTime: item.end_time, venue: item.venue, googleMapUrl: item.google_map, address: item.address, notes: item.notes, sortOrder: item.sort_order })) }
 }
 
 export function assertEditable(context: Awaited<ReturnType<typeof editorContext>>) { if (context.locked || context.client.status === 'READ_ONLY') apiError('EDIT_LOCKED', 'This invitation is locked after the wedding day.', 403) }

@@ -10,9 +10,7 @@ function addressText(event: PublicInvitation['events'][number]): string {
 }
 
 function openMap(event: PublicInvitation['events'][number]) {
-  if (event.googleMapUrl) {
-    window.open(event.googleMapUrl, '_blank', 'noopener,noreferrer')
-  }
+  if (event.googleMapUrl) window.open(event.googleMapUrl, '_blank', 'noopener,noreferrer')
 }
 
 const formattedDate = computed(() =>
@@ -27,7 +25,7 @@ const formattedDate = computed(() =>
         <p class="text-xs uppercase tracking-[0.3em] text-gold-400">Wedding Invitation</p>
         <h1 class="mt-6 font-display text-6xl font-medium md:text-8xl">
           {{ invitation.brideName }}
-          <span class="mx-3 text-gold-400">&</span>
+          <span class="mx-3 text-gold-400">&amp;</span>
           {{ invitation.groomName }}
         </h1>
         <p v-if="invitation.quote" class="mt-8 font-display text-2xl italic text-ivory-200/80">
@@ -61,13 +59,13 @@ const formattedDate = computed(() =>
             <div class="mt-4 flex flex-wrap gap-2">
               <button
                 v-if="event.googleMapUrl"
-                class="rounded-full bg-gold-500 px-4 py-2 text-sm font-medium text-ink-900 hover:bg-gold-400 transition-colors"
+                class="rounded-full bg-gold-500 px-4 py-2 text-sm font-medium text-ink-900 transition-colors hover:bg-gold-400"
                 @click="openMap(event)"
               >
                 Open in Google Maps
               </button>
               <button
-                class="rounded-full border border-ivory-100/30 px-4 py-2 text-sm hover:bg-ivory-100/10 transition-colors"
+                class="rounded-full border border-ivory-100/30 px-4 py-2 text-sm transition-colors hover:bg-ivory-100/10"
                 @click="copy(addressText(event))"
               >
                 {{ copied ? 'Copied!' : 'Copy Address' }}
@@ -79,8 +77,6 @@ const formattedDate = computed(() =>
       </div>
     </section>
 
-    <div class="bg-ink-800 px-6">
-      <PhotographyFooter :studio="invitation.studio" />
-    </div>
+    <div class="bg-ink-800 px-6"><PhotographyFooter :studio="invitation.studio" /></div>
   </article>
 </template>
