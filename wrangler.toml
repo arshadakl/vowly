@@ -7,5 +7,5 @@ pages_build_output_dir = "apps/web/dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "vowly"
-database_id = "f0072d7c-7499-4010-810e-e774f08401e0"
+database_id = "5e0df6d2-f3ff-4547-9190-f3e14ad61afe"
 migrations_dir = "database/migrations"
