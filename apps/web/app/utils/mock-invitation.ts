@@ -11,6 +11,7 @@ export function makeMockInvitation(template: 'classic' | 'luxury' = 'classic'): 
     coverImage: null,
     brideImage: null,
     groomImage: null,
+    showImages: false,
     weddingDate: '2026-08-06',
     weddingTz: 'Asia/Kolkata',
     events: [
