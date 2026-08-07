@@ -19,6 +19,7 @@ interface EditorInvitation extends Omit<PublicInvitation, 'slug'> {
 const invitation = ref<EditorInvitation | null>(null)
 const draft = ref<EditorInvitation | null>(null)
 const loading = ref(true)
+const noInvitation = ref(false)
 const saving = ref(false)
 const errorMessage = ref<string | null>(null)
 const notice = ref<string | null>(null)
@@ -31,8 +32,10 @@ try {
   invitation.value = await api<EditorInvitation>('/client/invitation')
   draft.value = structuredClone(invitation.value)
   rsvps.value = await api<RsvpData>('/client/invitation/rsvps')
-} catch {
-  await navigateTo('/login')
+} catch (error: unknown) {
+  const status = (error as { statusCode?: number }).statusCode
+  if (status === 404) noInvitation.value = true
+  else await navigateTo('/login')
 } finally {
   loading.value = false
   rsvpLoading.value = false
@@ -133,6 +136,12 @@ async function logout() { await api('/auth/client/logout', { method: 'POST' }); 
       </section>
       <section class="min-w-0"><div class="sticky top-5"><div class="mb-4 flex items-center justify-between"><p class="text-[10px] uppercase tracking-[0.24em] text-gold-600">Live preview</p><div class="flex border border-ink-900/15 bg-white text-xs"><button v-for="option in (['desktop', 'tablet', 'mobile'] as const)" :key="option" :class="device === option ? 'bg-ink-900 text-white' : ''" class="px-3 py-2 capitalize" @click="device = option">{{ option }}</button></div></div><div class="flex justify-center overflow-auto border border-ink-900/10 bg-[#d9d4ca] p-3 sm:p-6"><div v-if="preview" :class="previewWidth" class="overflow-hidden bg-white shadow-2xl transition-all"><TemplateRenderer :invitation="preview" /></div></div></div></section>
     </main>
+    <div v-else-if="noInvitation" class="mx-auto max-w-md px-5 py-16 text-center">
+      <p class="text-xs uppercase tracking-[0.3em] text-gold-600">Vowly</p>
+      <h1 class="mt-3 font-display text-3xl">Your invitation is being prepared</h1>
+      <p class="mt-4 text-sm text-ink-700">Your wedding invitation hasn't been created yet. Please contact your wedding planner or check back soon.</p>
+      <button class="mt-6 rounded-full bg-ink-900 px-6 py-3 text-xs uppercase tracking-widest text-white hover:bg-gold-600" @click="logout">Log out</button>
+    </div>
     <div v-else-if="loading" class="p-16 text-center text-sm">Loading studio...</div>
   </div>
 </template>

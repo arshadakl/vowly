@@ -13,8 +13,12 @@ export function useApi() {
     try {
       return await requestFetch<T>(request, { baseURL: '/api', ...options })
     } catch (error: unknown) {
-      const data = (error as { response?: { _data?: { error?: { message?: string } } } }).response?._data
-      throw new Error(data?.error?.message ?? (error instanceof Error ? error.message : 'Request failed'))
+      const response = (error as { response?: { status?: number; _data?: { error?: { code?: string; message?: string } } } }).response
+      const data = response?._data?.error
+      const apiErr = new Error(data?.message ?? (error instanceof Error ? error.message : 'Request failed')) as Error & { statusCode: number; code: string }
+      if (response?.status) apiErr.statusCode = response.status
+      if (data?.code) apiErr.code = data.code
+      throw apiErr
     }
   }
 }
