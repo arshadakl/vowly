@@ -18,7 +18,9 @@ export function normalizeNamePart(value: string): string {
  * Convert an ISO date (YYYY-MM-DD) into the DD-MM-YY representation used in slugs.
  */
 export function formatSlugDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-')
+  const parts = isoDate.split('-')
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return '00-00-00'
+  const [year, month, day] = parts
   return `${day}-${month}-${year!.slice(2)}`
 }
 

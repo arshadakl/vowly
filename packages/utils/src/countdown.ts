@@ -16,6 +16,11 @@ export function countdownParts(
 ): CountdownParts {
   const targetMs = typeof target === 'number' ? target : new Date(target).getTime()
   const nowMs = typeof now === 'number' ? now : new Date(now).getTime()
+
+  if (Number.isNaN(targetMs) || Number.isNaN(nowMs)) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, ended: true }
+  }
+
   const diff = targetMs - nowMs
 
   if (diff <= 0) {

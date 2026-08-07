@@ -1,5 +1,7 @@
 const PASSWORD_FORMAT = 'pbkdf2-sha256'
-const ITERATIONS = 100_000
+const ITERATIONS = 310_000
+const MIN_SUPPORTED_ITERATIONS = 100_000
+const MAX_SUPPORTED_ITERATIONS = 1_000_000
 const HASH_LENGTH = 256
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -42,14 +44,27 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, encoded: string): Promise<boolean> {
-  const [format, iterationText, saltText, hashText] = encoded.split('$')
-  if (format !== PASSWORD_FORMAT || !iterationText || !saltText || !hashText) return false
+  try {
+    const [format, iterationText, saltText, hashText] = encoded.split('$')
+    const iterations = Number(iterationText)
+    if (
+      format !== PASSWORD_FORMAT ||
+      !saltText ||
+      !hashText ||
+      !Number.isSafeInteger(iterations) ||
+      iterations < MIN_SUPPORTED_ITERATIONS ||
+      iterations > MAX_SUPPORTED_ITERATIONS
+    )
+      return false
 
-  const expected = fromBase64Url(hashText)
-  const actual = await derivePasswordKey(password, fromBase64Url(saltText), Number(iterationText))
-  if (actual.length !== expected.length) return false
+    const expected = fromBase64Url(hashText)
+    const actual = await derivePasswordKey(password, fromBase64Url(saltText), iterations)
+    if (actual.length !== expected.length) return false
 
-  let difference = 0
-  for (let i = 0; i < actual.length; i++) difference |= actual[i]! ^ expected[i]!
-  return difference === 0
+    let difference = 0
+    for (let i = 0; i < actual.length; i++) difference |= actual[i]! ^ expected[i]!
+    return difference === 0
+  } catch {
+    return false
+  }
 }

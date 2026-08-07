@@ -5,7 +5,7 @@ export const rsvpSubmitSchema = z.object({
   guestName: z.string().trim().min(1).max(80),
   status: z.enum(RSVP_STATUSES),
   guestCount: z.number().int().min(1).max(20).default(1),
-  website: z.string().max(0).optional(), // honeypot — must stay empty
+  website: z.string().optional(), // honeypot — bots fill this in; handler returns fake success
 })
 
 export const rsvpSettingsSchema = z.object({
@@ -35,6 +35,3 @@ export interface RsvpListItem {
   guestCount: number
   createdAt: string
 }
-
-export { RSVP_STATUSES }
-export type { RsvpStatus }

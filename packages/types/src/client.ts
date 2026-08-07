@@ -1,18 +1,25 @@
 import { z } from 'zod'
 import { CLIENT_STATUSES, type ClientStatus } from './enums'
+import { calendarDateSchema } from './date'
 
-export const phoneSchema = z
-  .string()
-  .trim()
-  .regex(
-    /^\+?[1-9]\d{6,14}$/,
-    'Invalid phone number. Use digits only, optionally starting with +.',
-  )
+export function normalizePhone(value: string): string {
+  return value.trim().replace(/[()\s-]/g, '')
+}
+
+export const phoneSchema = z.preprocess(
+  (value) => (typeof value === 'string' ? normalizePhone(value) : value),
+  z
+    .string()
+    .regex(
+      /^\+?[1-9]\d{6,14}$/,
+      'Invalid phone number. Use digits only, optionally starting with +.',
+    ),
+)
 
 export const clientCreateSchema = z.object({
   name: z.string().trim().min(1).max(80),
   phone: phoneSchema,
-  weddingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD'),
+  weddingDate: calendarDateSchema,
 })
 
 export type ClientCreate = z.infer<typeof clientCreateSchema>
@@ -49,5 +56,7 @@ export interface Client {
     created: boolean
     published: boolean
     slug: string | null
+    template?: 'classic' | 'luxury'
+    publishedAt?: string | null
   }
 }
