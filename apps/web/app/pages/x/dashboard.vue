@@ -8,10 +8,12 @@ import {
   Eye,
   Heart,
   MoreVertical,
+  Share2,
   Pencil,
   Plus,
   Search,
 } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 useSeoMeta({
   title: 'Admin Dashboard',
@@ -51,13 +53,12 @@ const status = ref<ClientStatus | 'ALL'>('ACTIVE')
 const page = ref(1)
 const loading = ref(true)
 const saving = ref(false)
-const errorMessage = ref<string | null>(null)
-const notice = ref<string | null>(null)
 const showCreate = ref(false)
 const editing = ref<Client | null>(null)
 const form = reactive({ name: '', phone: '', weddingDate: '' })
 const selectedRsvps = ref<{ client: Client; data: AdminRsvpData } | null>(null)
 const openMenu = ref<string | null>(null)
+const showUserMenu = ref(false)
 const menuPosition = reactive({ top: 0, left: 0 })
 
 function toggleMenu(clientId: string, event: MouseEvent) {
@@ -80,10 +81,7 @@ function showRsvpsFromMenu(client: Client) {
   openMenu.value = null
 }
 
-function shareFromMenu(client: Client) {
-  void copyShareLink(client)
-  openMenu.value = null
-}
+// Share link is now triggered directly using copyShareLink
 
 function actionFromMenu(client: Client, action: 'archive' | 'delete' | 'passcode') {
   void runAction(client, action)
@@ -114,7 +112,6 @@ const pageCount = computed(() =>
 )
 
 async function loadClients() {
-  errorMessage.value = null
   clients.value = await api<ClientPage>('/admin/clients', {
     query: { search: search.value, status: status.value, page: page.value, pageSize: 20 },
   })
@@ -140,13 +137,13 @@ async function runAction(client: Client, action: 'archive' | 'delete' | 'passcod
     const updated = await api<Client>(endpoint, options)
     if (action === 'passcode') {
       await navigator.clipboard?.writeText(updated.passcode)
-      notice.value = `New passcode ${updated.passcode} copied to clipboard.`
+      toast.success(`New passcode ${updated.passcode} copied to clipboard.`)
     } else {
-      notice.value = `${client.name} is now ${updated.status.toLowerCase()}.`
+      toast.success(`${client.name} is now ${updated.status.toLowerCase()}.`)
     }
     await loadClients()
   } catch (error: unknown) {
-    errorMessage.value = error instanceof Error ? error.message : 'Action failed'
+    toast.error(error instanceof Error ? error.message : 'Action failed')
   }
 }
 
@@ -154,9 +151,9 @@ async function copyShareLink(client: Client) {
   const url = `${window.location.origin}/login?key=${client.passcode}`
   try {
     await navigator.clipboard?.writeText(url)
-    notice.value = `Share link copied: ${url}`
+    toast.success('Share link copied to clipboard')
   } catch {
-    errorMessage.value = 'Could not copy the link.'
+    toast.error('Could not copy the link.')
   }
 }
 
@@ -174,21 +171,20 @@ function startEdit(client: Client) {
 
 async function saveClient() {
   saving.value = true
-  errorMessage.value = null
   try {
     if (editing.value) {
       await api<Client>(`/admin/clients/${editing.value.id}`, { method: 'PATCH', body: form })
-      notice.value = 'Client details updated.'
+      toast.success('Client details updated.')
     } else {
       const created = await api<Client>('/admin/clients', { method: 'POST', body: form })
       const url = `${window.location.origin}/login?key=${created.passcode}`
-      notice.value = `${created.clientCode} created. Share link: ${url}`
+      toast.success(`${created.clientCode} created. Share link copied.`)
       await navigator.clipboard?.writeText(url)
     }
     showCreate.value = false
     await loadClients()
   } catch (error: unknown) {
-    errorMessage.value = error instanceof Error ? error.message : 'Could not save client'
+    toast.error(error instanceof Error ? error.message : 'Could not save client')
   } finally {
     saving.value = false
   }
@@ -204,9 +200,9 @@ async function setOverride(client: Client, override: 'force_open' | 'force_locke
       method: 'POST',
       body: { override },
     })
-    notice.value = `${client.name} edit lock updated.`
+    toast.success(`${client.name} edit lock updated.`)
   } catch (error: unknown) {
-    errorMessage.value = error instanceof Error ? error.message : 'Could not update edit lock.'
+    toast.error(error instanceof Error ? error.message : 'Could not update edit lock.')
   }
 }
 async function showRsvps(client: Client) {
@@ -214,13 +210,22 @@ async function showRsvps(client: Client) {
     const data = await api<AdminRsvpData>(`/admin/clients/${client.id}/invitation/rsvps`)
     selectedRsvps.value = { client, data }
   } catch (error: unknown) {
-    errorMessage.value = error instanceof Error ? error.message : 'Could not load RSVPs.'
+    toast.error(error instanceof Error ? error.message : 'Could not load RSVPs.')
   }
 }
 </script>
 
 <template>
   <div v-if="session" class="min-h-screen bg-[#f4f6fa] px-4 py-5 text-[#172033] sm:px-6">
+    <!-- Clickaway overlay for the 3-dot client menus -->
+    <div
+      v-if="openMenu"
+      class="fixed inset-0 z-40"
+      @click="openMenu = null"
+      @wheel="openMenu = null"
+      @touchmove="openMenu = null"
+    ></div>
+
     <header
       class="mx-auto flex max-w-[1500px] items-center justify-between rounded-xl border border-[#e8ebf1] bg-white px-6 py-4 shadow-[0_8px_30px_rgb(23_32_51/5%)] sm:px-8"
     >
@@ -233,34 +238,38 @@ async function showRsvps(client: Client) {
           <p class="mt-1 text-sm text-[#6b7487]">Wedding Invitation Platform</p>
         </div>
       </div>
-      <div class="flex items-center gap-3 text-sm font-medium">
-        <span
-          class="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0eef8] text-[#34294d]"
-          >{{ session.username.charAt(0).toUpperCase() }}</span
-        ><span class="hidden sm:inline">{{ session.username }}</span
-        ><button class="text-[#596276]" aria-label="Log out" @click="logout">
-          <ChevronDown class="h-4 w-4" />
+      <div class="relative">
+        <button
+          class="flex items-center gap-3 text-sm font-medium hover:opacity-80 focus:outline-none"
+          @click="showUserMenu = !showUserMenu"
+        >
+          <span
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0eef8] text-[#34294d]"
+          >{{ session.username.charAt(0).toUpperCase() }}</span>
+          <span class="hidden sm:inline">{{ session.username }}</span>
+          <ChevronDown class="h-4 w-4 text-[#596276]" />
         </button>
+
+        <div
+          v-if="showUserMenu"
+          class="absolute right-0 top-full mt-2 w-48 rounded-lg border border-[#e1e5ed] bg-white py-1 shadow-xl z-50"
+        >
+          <button
+            class="block w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+            @click="logout"
+          >
+            Log out
+          </button>
+        </div>
+        
+        <!-- Invisible overlay for clickaway -->
+        <div v-if="showUserMenu" class="fixed inset-0 z-40" @click="showUserMenu = false" />
       </div>
     </header>
 
     <main
       class="mx-auto mt-5 max-w-[1500px] rounded-xl border border-[#e8ebf1] bg-white shadow-[0_8px_30px_rgb(23_32_51/4%)]"
     >
-      <div
-        v-if="notice"
-        class="mb-6 flex items-center justify-between border-l-2 border-gold-500 bg-white px-4 py-3 text-sm text-ink-700 shadow-sm"
-      >
-        <span>{{ notice }}</span
-        ><button class="text-xs uppercase tracking-widest" @click="notice = null">Close</button>
-      </div>
-      <p
-        v-if="errorMessage"
-        class="mb-6 border-l-2 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-700"
-      >
-        {{ errorMessage }}
-      </p>
-
       <section class="mt-0">
         <div
           class="flex flex-col gap-4 border-b border-[#e8ebf1] px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-10"
@@ -314,47 +323,181 @@ async function showRsvps(client: Client) {
         </div>
         <div
           v-else-if="clients?.items.length"
-          class="mx-6 overflow-x-auto rounded-lg border border-[#e1e5ed] bg-white sm:mx-10"
+          class="mx-4 sm:mx-10"
         >
-          <table class="w-full min-w-[820px] text-left text-sm">
-            <thead
-              class="border-b border-[#e1e5ed] bg-[#f8f9fb] text-xs font-semibold text-[#596276]"
-            >
-              <tr>
-                <th class="px-4 py-4">#</th>
-                <th class="px-4 py-4">Couple Name</th>
-                <th class="px-4 py-4">Phone Number</th>
-                <th class="px-4 py-4">Wedding Date</th>
-                <th class="px-4 py-4">Status</th>
-                <th class="px-4 py-4">Template</th>
-                <th class="px-4 py-4">Published</th>
-                <th class="px-4 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="client in clients.items"
-                :key="client.id"
-                class="border-b border-[#edf0f4] last:border-0 hover:bg-[#fbfcfe]"
+          <!-- Desktop Table -->
+          <div class="hidden overflow-x-auto rounded-lg border border-[#e1e5ed] bg-white sm:block">
+            <table class="w-full min-w-[820px] text-left text-sm">
+              <thead
+                class="border-b border-[#e1e5ed] bg-[#f8f9fb] text-xs font-semibold text-[#596276]"
               >
-                <td class="px-4 py-4 text-sm text-[#596276]">
-                  {{ (page - 1) * (clients?.pageSize ?? 20) + clients.items.indexOf(client) + 1 }}
-                </td>
-                <td class="px-4 py-4">
-                  <div class="flex items-center gap-3">
+                <tr>
+                  <th class="px-4 py-4">#</th>
+                  <th class="px-4 py-4">Couple Name</th>
+                  <th class="px-4 py-4">Phone Number</th>
+                  <th class="px-4 py-4">Wedding Date</th>
+                  <th class="px-4 py-4">Status</th>
+                  <th class="px-4 py-4">Template</th>
+                  <th class="px-4 py-4">Published</th>
+                  <th class="px-4 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="client in clients.items"
+                  :key="client.id"
+                  class="border-b border-[#edf0f4] last:border-0 hover:bg-[#fbfcfe]"
+                >
+                  <td class="px-4 py-4 text-sm text-[#596276]">
+                    {{ (page - 1) * (clients?.pageSize ?? 20) + clients.items.indexOf(client) + 1 }}
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center gap-3">
+                      <span
+                        class="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8e6ef] text-sm font-semibold text-[#a54167]"
+                        >{{ client.name.charAt(0).toUpperCase() }}</span
+                      >
+                      <p class="font-semibold">{{ client.name }}</p>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4 text-sm">{{ client.phone }}</td>
+                  <td class="px-4 py-4 text-sm text-[#3e485b]">
+                    <CalendarDays class="mr-2 inline h-4 w-4" />{{ client.weddingDate }}
+                  </td>
+                  <td class="px-4 py-4">
                     <span
-                      class="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8e6ef] text-sm font-semibold text-[#a54167]"
-                      >{{ client.name.charAt(0).toUpperCase() }}</span
+                      :class="
+                        client.status === 'ACTIVE'
+                          ? 'bg-[#e4f5e9] text-[#2d7a4b]'
+                          : client.status === 'READ_ONLY'
+                            ? 'bg-[#eaf0ff] text-[#3461bd]'
+                            : 'bg-[#fff0ea] text-[#c4572c]'
+                      "
+                      class="rounded-lg px-3 py-2 text-xs font-semibold"
+                      >{{
+                        client.status === 'ACTIVE'
+                          ? client.invitation?.published
+                            ? 'Published'
+                            : 'Draft'
+                          : client.status.replace('_', ' ')
+                      }}</span
                     >
-                    <p class="font-semibold">{{ client.name }}</p>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span
+                      class="rounded-lg bg-[#f5f0e8] px-3 py-2 text-xs font-semibold text-[#8f6e3f]"
+                      >Floral</span
+                    >
+                  </td>
+                  <td class="px-4 py-4 text-sm text-[#3e485b]">
+                    {{
+                      client.invitation?.publishedAt
+                        ? client.invitation.publishedAt.slice(0, 10)
+                        : '—'
+                    }}
+                  </td>
+                  <td class="px-4 py-4">
+                    <NuxtLink
+                      v-if="client.invitation?.slug"
+                      :to="`/${client.invitation.slug}`"
+                      target="_blank"
+                      class="sr-only"
+                      >Open</NuxtLink
+                    >
+                    <div class="relative flex justify-end gap-2">
+                      <button
+                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        aria-label="Share"
+                        @click="copyShareLink(client)"
+                      >
+                        <Share2 class="h-4 w-4" /></button
+                      ><button
+                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        aria-label="Preview"
+                        @click="navigateTo(`/x/preview/${client.id}`)"
+                      >
+                        <Eye class="h-4 w-4" /></button
+                      ><button
+                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        aria-label="Edit"
+                        @click="startEdit(client)"
+                      >
+                        <Pencil class="h-4 w-4" /></button
+                      ><button
+                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        aria-label="More actions"
+                        @click="toggleMenu(client.id, $event)"
+                      >
+                        <MoreVertical class="h-4 w-4" />
+                      </button>
+                      <div
+                        v-if="openMenu === client.id"
+                        class="fixed z-50 w-44 rounded-lg border border-[#e1e5ed] bg-white py-1 text-left shadow-xl"
+                        :style="{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }"
+                      >
+                        <button
+                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                          @click="editFromMenu(client)"
+                        >
+                          Edit</button
+                        ><button
+                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                          @click="showRsvpsFromMenu(client)"
+                        >
+                          RSVPs</button
+                        ><button
+                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                          @click="actionFromMenu(client, 'passcode')"
+                        >
+                          New code</button
+                        ><button
+                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                          @click="overrideFromMenu(client, 'force_open')"
+                        >
+                          Unlock edits</button
+                        ><button
+                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                          @click="overrideFromMenu(client, 'force_locked')"
+                        >
+                          Lock edits</button
+                        ><button
+                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                          @click="overrideFromMenu(client, null)"
+                        >
+                          Auto lock</button
+                        ><button
+                          v-if="client.status === 'ACTIVE'"
+                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                          @click="actionFromMenu(client, 'archive')"
+                        >
+                          Archive</button
+                        ><button
+                          v-if="client.status !== 'DELETED'"
+                          class="block w-full px-4 py-2 text-left text-xs text-red-700 hover:bg-red-50"
+                          @click="actionFromMenu(client, 'delete')"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div class="space-y-4 sm:hidden">
+            <div v-for="client in clients.items" :key="client.id + '-mobile'" class="rounded-xl border border-[#e1e5ed] bg-white p-4 shadow-sm">
+              <div class="flex items-center justify-between border-b border-[#edf0f4] pb-3">
+                <div class="flex items-center gap-3">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#f8e6ef] font-semibold text-[#a54167]">{{ client.name.charAt(0).toUpperCase() }}</span>
+                  <div>
+                    <p class="font-semibold text-base">{{ client.name }}</p>
+                    <p class="text-xs text-[#596276] mt-0.5"><CalendarDays class="mr-1 inline h-3 w-3" />{{ client.weddingDate }}</p>
                   </div>
-                </td>
-                <td class="px-4 py-4 text-sm">{{ client.phone }}</td>
-                <td class="px-4 py-4 text-sm text-[#3e485b]">
-                  <CalendarDays class="mr-2 inline h-4 w-4" />{{ client.weddingDate }}
-                </td>
-                <td class="px-4 py-4">
-                  <span
+                </div>
+                <span
                     :class="
                       client.status === 'ACTIVE'
                         ? 'bg-[#e4f5e9] text-[#2d7a4b]'
@@ -362,116 +505,69 @@ async function showRsvps(client: Client) {
                           ? 'bg-[#eaf0ff] text-[#3461bd]'
                           : 'bg-[#fff0ea] text-[#c4572c]'
                     "
-                    class="rounded-lg px-3 py-2 text-xs font-semibold"
+                    class="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
                     >{{
                       client.status === 'ACTIVE'
                         ? client.invitation?.published
                           ? 'Published'
                           : 'Draft'
                         : client.status.replace('_', ' ')
-                    }}</span
-                  >
-                </td>
-                <td class="px-4 py-4">
-                  <span
-                    class="rounded-lg bg-[#f5f0e8] px-3 py-2 text-xs font-semibold text-[#8f6e3f]"
-                    >Floral</span
-                  >
-                </td>
-                <td class="px-4 py-4 text-sm text-[#3e485b]">
-                  {{
-                    client.invitation?.publishedAt
-                      ? client.invitation.publishedAt.slice(0, 10)
-                      : '—'
-                  }}
-                </td>
-                <td class="px-4 py-4">
-                  <NuxtLink
-                    v-if="client.invitation?.slug"
-                    :to="`/${client.invitation.slug}`"
-                    target="_blank"
-                    class="sr-only"
-                    >Open</NuxtLink
-                  >
-                  <div class="relative flex justify-end gap-2">
+                    }}</span>
+              </div>
+              
+              <div class="py-3 flex justify-between text-sm">
+                 <div>
+                   <p class="text-[#596276] text-xs">Phone Number</p>
+                   <p class="font-medium mt-0.5">{{ client.phone }}</p>
+                 </div>
+                 <div class="text-right">
+                   <p class="text-[#596276] text-xs">Template</p>
+                   <p class="font-medium mt-0.5 text-[#8f6e3f]">Floral</p>
+                 </div>
+              </div>
+
+              <div class="flex justify-between items-center pt-3 border-t border-[#edf0f4]">
+                <button
+                   class="inline-flex items-center gap-2 text-sm text-[#4e586d] font-medium py-1 px-2 -ml-2 rounded-lg hover:bg-[#f8f9fb] transition"
+                   @click="copyShareLink(client)"
+                >
+                  <Share2 class="h-4 w-4" /> Share
+                </button>
+                <div class="flex gap-2 relative">
                     <button
-                      class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
-                      aria-label="Preview"
+                      class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] text-[#4e586d] hover:border-[#b9a2d9]"
                       @click="navigateTo(`/x/preview/${client.id}`)"
                     >
-                      ><Eye class="h-4 w-4" /></button
-                    ><button
-                      class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
-                      aria-label="Edit"
+                      <Eye class="h-4 w-4" /></button>
+                    <button
+                      class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] text-[#4e586d] hover:border-[#b9a2d9]"
                       @click="startEdit(client)"
                     >
-                      ><Pencil class="h-4 w-4" /></button
-                    ><button
-                      class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
-                      aria-label="More actions"
+                      <Pencil class="h-4 w-4" /></button>
+                    <button
+                      class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] text-[#4e586d] hover:border-[#b9a2d9]"
                       @click="toggleMenu(client.id, $event)"
                     >
-                      ><MoreVertical class="h-4 w-4" />
+                      <MoreVertical class="h-4 w-4" />
                     </button>
                     <div
                       v-if="openMenu === client.id"
-                      class="fixed z-50 w-44 border border-[#e1e5ed] bg-white py-1 text-left shadow-xl"
+                      class="fixed z-50 w-44 rounded-lg border border-[#e1e5ed] bg-white py-1 text-left shadow-xl"
                       :style="{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }"
                     >
-                      <button
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="editFromMenu(client)"
-                      >
-                        Edit</button
-                      ><button
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="showRsvpsFromMenu(client)"
-                      >
-                        RSVPs</button
-                      ><button
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="shareFromMenu(client)"
-                      >
-                        Share link</button
-                      ><button
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="actionFromMenu(client, 'passcode')"
-                      >
-                        New code</button
-                      ><button
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="overrideFromMenu(client, 'force_open')"
-                      >
-                        Unlock edits</button
-                      ><button
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="overrideFromMenu(client, 'force_locked')"
-                      >
-                        Lock edits</button
-                      ><button
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="overrideFromMenu(client, null)"
-                      >
-                        Auto lock</button
-                      ><button
-                        v-if="client.status === 'ACTIVE'"
-                        class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                        @click="actionFromMenu(client, 'archive')"
-                      >
-                        Archive</button
-                      ><button
-                        v-if="client.status !== 'DELETED'"
-                        class="block w-full px-4 py-2 text-left text-xs text-red-700 hover:bg-red-50"
-                        @click="actionFromMenu(client, 'delete')"
-                      >
-                        Delete
-                      </button>
+                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="editFromMenu(client)">Edit</button>
+                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="showRsvpsFromMenu(client)">RSVPs</button>
+                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="actionFromMenu(client, 'passcode')">New code</button>
+                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="overrideFromMenu(client, 'force_open')">Unlock edits</button>
+                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="overrideFromMenu(client, 'force_locked')">Lock edits</button>
+                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="overrideFromMenu(client, null)">Auto lock</button>
+                      <button v-if="client.status === 'ACTIVE'" class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="actionFromMenu(client, 'archive')">Archive</button>
+                      <button v-if="client.status !== 'DELETED'" class="block w-full px-4 py-2 text-left text-xs text-red-700 hover:bg-red-50" @click="actionFromMenu(client, 'delete')">Delete</button>
                     </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div
           v-else
