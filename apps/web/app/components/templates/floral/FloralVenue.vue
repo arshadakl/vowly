@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { MapPin } from 'lucide-vue-next'
-import { parseGoogleMapsUrl, googleMapsOpenUrl } from '@vowly/utils'
+import { parseGoogleMapsUrl, googleMapsOpenUrl, googleMapsEmbedUrl } from '@vowly/utils'
 
 const props = defineProps<{
   event: PublicInvitation['events'][number] | undefined
@@ -12,7 +12,11 @@ const isShortLink = computed(() => {
   return parseGoogleMapsUrl(props.event.googleMapUrl).type === 'short'
 })
 
-const embedSrc = computed(() => props.event?.googleMapEmbedUrl ?? '')
+const embedSrc = computed(() => {
+  if (props.event?.googleMapEmbedUrl) return props.event.googleMapEmbedUrl
+  if (props.event?.googleMapUrl) return googleMapsEmbedUrl(props.event.googleMapUrl) || ''
+  return ''
+})
 
 const openUrl = computed(() => {
   if (!props.event?.googleMapUrl) return '#'
@@ -21,7 +25,7 @@ const openUrl = computed(() => {
 </script>
 
 <template>
-  <section v-if="event && (event.venue || event.address)" class="bg-[#faf5ef] px-6 py-16">
+  <section v-if="event && (event.venue || event.address || event.googleMapUrl)" class="bg-[#faf5ef] px-6 py-16">
     <div class="mx-auto max-w-3xl">
       <p class="text-center text-xs uppercase tracking-[0.3em] text-gold-500">Our Venue</p>
       <h2 class="mt-3 text-center font-display text-3xl text-ink-800">{{ event.venue || 'Venue' }}</h2>

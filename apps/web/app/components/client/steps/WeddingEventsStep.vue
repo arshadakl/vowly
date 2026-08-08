@@ -13,6 +13,14 @@ function generateEmbedUrl(googleMapUrl: string | null | undefined): string | nul
   return googleMapsEmbedUrl(googleMapUrl) || null
 }
 
+onMounted(() => {
+  for (const event of draft.value.events) {
+    if (event.googleMapUrl && !event.googleMapEmbedUrl) {
+      event.googleMapEmbedUrl = generateEmbedUrl(event.googleMapUrl)
+    }
+  }
+})
+
 function addEvent() {
   draft.value.events.push({
     id: crypto.randomUUID(),
