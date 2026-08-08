@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import QRCode from 'qrcode'
-import { buildIcsEvent, googleCalendarUrl } from '@vowly/utils'
 
 const api = useApi()
 const route = useRoute()
@@ -33,14 +32,6 @@ onMounted(async () => {
     qrCode.value = await QRCode.toDataURL(shareUrl.value, { width: 240, margin: 1 })
 })
 
-async function share() {
-  if (!invitation.value) return
-  if (navigator.share) await navigator.share({ title: pageTitle.value, url: shareUrl.value })
-  else await navigator.clipboard?.writeText(shareUrl.value)
-}
-async function copyLink() {
-  await navigator.clipboard?.writeText(shareUrl.value)
-}
 async function submitRsvp() {
   if (!invitation.value || !rsvpName.value.trim()) return
   rsvpSubmitting.value = true
@@ -64,25 +55,6 @@ async function submitRsvp() {
   } finally {
     rsvpSubmitting.value = false
   }
-}
-async function downloadCalendar(event: PublicInvitation['events'][number]) {
-  if (!invitation.value) return
-  const input = {
-    title: event.title,
-    date: event.eventDate,
-    startTime: event.startTime,
-    endTime: event.endTime,
-    timeZone: invitation.value.weddingTz,
-    venue: event.venue,
-    address: event.address,
-    description: event.notes,
-  }
-  const blob = new Blob([buildIcsEvent(input)], { type: 'text/calendar' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `${event.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.ics`
-  link.click()
-  URL.revokeObjectURL(link.href)
 }
 
 const pageTitle = computed(() =>
@@ -112,46 +84,6 @@ useSeoMeta({
 <template>
   <main>
     <template v-if="invitation">
-      <!-- <section
-        class="flex flex-wrap items-center justify-center gap-3 bg-ink-900 px-6 py-4 text-xs text-white"
-      >
-        <button class="border border-white/30 px-4 py-2" @click="share">Share invitation</button>
-        <button class="border border-white/30 px-4 py-2" @click="copyLink">Copy link</button>
-        <div v-if="qrCode" class="flex items-center gap-3 bg-white p-2 text-ink-900">
-          <img :src="qrCode" alt="QR code for this invitation" width="72" height="72" ><span
-            >Scan to open</span
-          >
-        </div>
-        <div class="flex gap-2">
-          <a
-            v-for="item in invitation.events"
-            :key="item.id"
-            :href="
-              googleCalendarUrl({
-                title: item.title,
-                date: item.eventDate,
-                startTime: item.startTime,
-                endTime: item.endTime,
-                timeZone: invitation.weddingTz,
-                venue: item.venue,
-                address: item.address,
-                description: item.notes,
-              })
-            "
-            target="_blank"
-            rel="noopener noreferrer"
-            class="border border-white/30 px-4 py-2"
-            >{{ item.title }} calendar</a
-          ><button
-            v-for="item in invitation.events"
-            :key="`${item.id}-ics`"
-            class="border border-white/30 px-4 py-2"
-            @click="downloadCalendar(item)"
-          >
-            Download .ics
-          </button>
-        </div>
-      </section> -->
       <TemplateRenderer :invitation="invitation" />
       <section
         v-if="invitation?.rsvp.enabled"
