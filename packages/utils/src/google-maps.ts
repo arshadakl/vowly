@@ -5,8 +5,8 @@
  * - Standard Google Maps URLs (place, search, direction, @coords)
  * - Short links (maps.app.goo.gl, goo.gl) — detected, not resolved client-side
  * - Coordinate extraction from @lat,lng and query params
- * - Place name extraction from /maps/place/ paths
- * - Embed URL generation for iframes (no API key needed for basic embeds)
+ * - Place ID extraction from URL path and data params
+ * - Embed URL generation using the pb format (what Google Maps actually uses)
  * - Open URL generation that always works in a new tab
  */
 
@@ -33,6 +33,10 @@ export interface GoogleMapResult {
 
 const SHORT_LINK_HOSTS = new Set(['maps.app.goo.gl', 'goo.gl'])
 
+// Regex patterns for extracting data from Google Maps URLs
+const PLACE_ID_REGEX = /(?:1s|2s|3m3!1m2!1s)(0x[a-fA-F0-9]+(?:%3A|:)0x[a-fA-F0-9]+)/
+const COORDS_REGEX = /(?:@|!2d)(-?\d+\.\d+)(?:,|!3d)(-?\d+\.\d+)/
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -57,35 +61,37 @@ function isGoogleMapsUrl(url: URL): boolean {
   return isGoogleMapsHost(url.hostname)
 }
 
-function extractCoordinates(url: URL): { lat: number; lng: number } | undefined {
-  // /@11.1215847,76.2887387,1133m or /@11.1215847,76.2887387
-  const atMatch = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/)
-  if (atMatch) {
-    return { lat: Number(atMatch[1]), lng: Number(atMatch[2]) }
+function extractCoordinatesFromUrl(url: URL): { lat: number; lng: number } | undefined {
+  const fullUrl = url.toString()
+
+  // Try regex on full URL first (handles @lat,lng and !2d!3d formats)
+  const coordsMatch = COORDS_REGEX.exec(fullUrl)
+  if (coordsMatch) {
+    return { lat: Number(coordsMatch[1]), lng: Number(coordsMatch[2]) }
   }
 
-  // ?query=11.1215847,76.2887387 or ?q=11.1215847,76.2887387
-  const query = url.searchParams.get('query') ?? url.searchParams.get('q')
-  if (query) {
-    const queryMatch = query.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
-    if (queryMatch) {
-      return { lat: Number(queryMatch[1]), lng: Number(queryMatch[2]) }
-    }
-  }
-
-  // ?ll=27.1751,78.0421
-  const ll = url.searchParams.get('ll')
-  if (ll) {
-    const llMatch = ll.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
-    if (llMatch) {
-      return { lat: Number(llMatch[1]), lng: Number(llMatch[2]) }
+  // Check each param for coordinate patterns (not just the first non-null one)
+  for (const key of ['ll', 'query', 'q']) {
+    const val = url.searchParams.get(key)
+    if (val) {
+      const m = val.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
+      if (m) return { lat: Number(m[1]), lng: Number(m[2]) }
     }
   }
 
   return undefined
 }
 
-function extractPlaceId(url: URL): string | undefined {
+function extractPlaceIdFromUrl(url: URL): string | undefined {
+  const fullUrl = url.toString()
+
+  // Extract from URL path/data params using regex (handles place URLs with data= param)
+  const placeIdMatch = PLACE_ID_REGEX.exec(fullUrl)
+  if (placeIdMatch?.[1]) {
+    return placeIdMatch[1].replace('%3A', ':')
+  }
+
+  // Fallback to query params
   return url.searchParams.get('query_place_id') ?? url.searchParams.get('place_id') ?? undefined
 }
 
@@ -112,7 +118,6 @@ function extractSearchQuery(url: URL): string | undefined {
 function extractQueryName(url: URL): string | undefined {
   const q = url.searchParams.get('q')
   if (!q) return undefined
-  // Don't return coordinate-only queries as names
   if (/^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/.test(q)) return undefined
   try {
     return decodeURIComponent(q).replace(/\+/g, ' ')
@@ -128,69 +133,46 @@ function classifyUrl(url: URL): GoogleMapResult['type'] {
   if (/\/maps\/place\//i.test(url.pathname)) return 'place'
   if (/\/maps\/search/i.test(url.pathname)) return 'search'
   if (/\/maps\/dir\//i.test(url.pathname)) return 'direction'
-  if (extractCoordinates(url)) return 'coordinates'
+  if (extractCoordinatesFromUrl(url)) return 'coordinates'
 
-  // maps.google.com/?q=... without /maps/ path
-  if (host === 'maps.google.com' && (url.searchParams.get('q') || url.searchParams.get('query'))) {
-    return 'search'
+  // maps.google.com with q/query text (no coordinates in the URL)
+  if (host === 'maps.google.com') {
+    const q = url.searchParams.get('q') ?? url.searchParams.get('query')
+    if (q && !/^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/.test(q)) {
+      return 'search'
+    }
   }
 
   return 'unknown'
 }
 
-function buildEmbedUrl(url: URL, type: GoogleMapResult['type']): string {
-  const coordinates = extractCoordinates(url)
-  const placeId = extractPlaceId(url)
-  const placeName = extractPlaceName(url)
-  const searchQuery = extractSearchQuery(url)
-  const queryName = extractQueryName(url)
-  const name = placeName ?? searchQuery ?? queryName
-
-  // Short links can't be embedded
-  if (type === 'short') return ''
-
-  // Direction URLs without coordinates can't be embedded simply
-  if (type === 'direction' && !coordinates) return ''
-
-  // Best case: real Place ID — use search fallback (no API key needed)
-  if (placeId) {
-    return `https://maps.google.com/maps?q=place_id:${placeId}&z=15&output=embed`
-  }
-
-  // Coordinates — most reliable for embedding
-  if (coordinates) {
-    return `https://maps.google.com/maps?q=${coordinates.lat},${coordinates.lng}&z=15&output=embed`
-  }
-
-  // Name-based query
-  if (name) {
-    return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=15&output=embed`
-  }
-
-  return ''
+/**
+ * Build an embeddable Google Maps URL using the pb format.
+ * This is the actual format Google Maps uses for iframe embeds.
+ */
+function buildEmbedUrl(latitude: number, longitude: number, placeId?: string): string {
+  const timestamp = Date.now()
+  const placeIdSegment = placeId ? `!1s${placeId}!2s` : '!1s!2s'
+  return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d${longitude}!3d${latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!${placeIdSegment}!5e1!3m2!1sen!2sin!4v${timestamp}!5m2!1sen!2sin`
 }
 
 function buildOpenUrl(url: URL, type: GoogleMapResult['type']): string {
-  // Short links — open directly (browser will follow redirect)
   if (type === 'short') return url.toString()
 
-  const coordinates = extractCoordinates(url)
+  const coordinates = extractCoordinatesFromUrl(url)
   const placeName = extractPlaceName(url)
   const searchQuery = extractSearchQuery(url)
   const queryName = extractQueryName(url)
   const name = placeName ?? searchQuery ?? queryName
 
-  // Place/search names get a search link
   if (name) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`
   }
 
-  // Coordinates get a search link
   if (coordinates) {
     return `https://www.google.com/maps/search/?api=1&query=${coordinates.lat},${coordinates.lng}`
   }
 
-  // Direction URLs — preserve the original
   if (type === 'direction') return url.toString()
 
   return url.toString()
@@ -208,7 +190,8 @@ function buildOpenUrl(url: URL, type: GoogleMapResult['type']): string {
  * - `type` — short | place | search | coordinates | direction | unknown
  * - `name` — extracted place name or search query
  * - `lat`, `lng` — extracted coordinates
- * - `embedUrl` — iframe-compatible embed URL (empty for short links)
+ * - `placeId` — extracted Google Place ID (if available)
+ * - `embedUrl` — iframe-compatible embed URL using pb format (empty for short links)
  * - `openUrl` — reliable link that opens in Google Maps
  */
 export function parseGoogleMapsUrl(input: string): GoogleMapResult {
@@ -234,12 +217,26 @@ export function parseGoogleMapsUrl(input: string): GoogleMapResult {
   }
 
   const type = classifyUrl(url)
-  const coordinates = extractCoordinates(url)
-  const placeId = extractPlaceId(url)
+  const coordinates = extractCoordinatesFromUrl(url)
+  const placeId = extractPlaceIdFromUrl(url)
   const placeName = extractPlaceName(url)
   const searchQuery = extractSearchQuery(url)
   const queryName = extractQueryName(url)
   const name = placeName ?? searchQuery ?? queryName
+
+  // Build embed URL
+  let embedUrl = ''
+  if (type !== 'short') {
+    if (coordinates) {
+      embedUrl = buildEmbedUrl(coordinates.lat, coordinates.lng, placeId)
+    } else if (placeId) {
+      // Place ID without coordinates — use a default center
+      embedUrl = buildEmbedUrl(0, 0, placeId)
+    } else if (name) {
+      // Name-only fallback — no coordinates available, skip embed
+      embedUrl = ''
+    }
+  }
 
   return {
     valid: true,
@@ -249,7 +246,7 @@ export function parseGoogleMapsUrl(input: string): GoogleMapResult {
     lat: coordinates?.lat,
     lng: coordinates?.lng,
     placeId: placeId ?? undefined,
-    embedUrl: buildEmbedUrl(url, type),
+    embedUrl,
     openUrl: buildOpenUrl(url, type),
   }
 }
@@ -272,8 +269,8 @@ export function isShortGoogleMapsLink(url: string): boolean {
 /**
  * Convert any Google Maps URL to an embeddable iframe src.
  *
- * - Short links return empty string (use isShortGoogleMapsLink to detect).
- * - All other formats are parsed and converted to a fallback embed URL.
+ * Uses the pb format that Google Maps actually uses for embeds.
+ * Short links return empty string (use isShortGoogleMapsLink to detect).
  */
 export function googleMapsEmbedUrl(url: string): string {
   return parseGoogleMapsUrl(url).embedUrl
