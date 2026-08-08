@@ -25,7 +25,7 @@ const featuredEvent = computed(() => {
 
     <FloralVenue :event="featuredEvent" />
 
-    <FloralShare v-if="invitation.slug" :slug="invitation.slug" />
+    <FloralShare v-if="invitation.slug" :slug="invitation.slug" :invitation="invitation" />
 
     <FloralFooter :studio="invitation.studio" />
   </article>

@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
       bride_name: string
       groom_name: string
       slug: string
-      template: 'floral'
+      template: string
       quote: string | null
       cover_image: string | null
       bride_image: string | null
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
     brideName: row!.bride_name,
     groomName: row!.groom_name,
     slug: row!.slug,
-    template: 'floral' as const,
+    template: row!.template as any,
     quote: row!.quote,
     coverImage: row!.cover_image,
     brideImage: row!.bride_image,

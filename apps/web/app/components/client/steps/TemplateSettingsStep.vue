@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CalendarDays, Image, Palette, QrCode } from 'lucide-vue-next'
 import type { EditorInvitation } from '~/types/client-wizard'
+import { templateDefinitions } from '~/utils/templates'
 
 const props = defineProps<{ draft: EditorInvitation; locked: boolean }>()
 const draft = computed(() => props.draft)
@@ -23,13 +24,26 @@ const draft = computed(() => props.draft)
       <h3 class="text-lg font-semibold">Choose Template</h3>
       <p class="mt-1 text-sm text-ink-700/65">Select a design that matches your style.</p>
       <div class="mt-5 grid gap-4 sm:grid-cols-2">
-        <div
-          class="min-h-32 border border-gold-500 bg-gold-500/5 p-5"
+        <button
+          v-for="tpl in templateDefinitions"
+          :key="tpl.id"
+          type="button"
+          :disabled="locked"
+          class="min-h-32 p-5 text-left transition-colors"
+          :class="[
+            draft.template === tpl.id 
+              ? 'border border-gold-500 bg-gold-500/5' 
+              : 'border border-ink-900/10 hover:border-gold-500/50 hover:bg-gold-500/5'
+          ]"
+          @click="draft.template = tpl.id"
         >
-          <span class="font-display text-2xl">Floral</span>
-          <span class="mt-2 block text-sm text-ink-700/65">Warm ivory with gold accents and botanical charm.</span>
-          <span class="mt-4 block text-xs font-semibold uppercase tracking-widest text-gold-600">Selected</span>
-        </div>
+          <span class="font-display text-2xl">{{ tpl.name }}</span>
+          <span class="mt-2 block text-sm text-ink-700/65">{{ tpl.description }}</span>
+          <span 
+            v-if="draft.template === tpl.id" 
+            class="mt-4 block text-xs font-semibold uppercase tracking-widest text-gold-600"
+          >Selected</span>
+        </button>
       </div>
     </div>
     <div class="mt-8">
