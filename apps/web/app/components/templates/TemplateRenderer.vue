@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
+import FloralTemplate from '~/components/templates/floral/FloralTemplate.vue'
 
-const props = defineProps<{ invitation: PublicInvitation }>()
-const resolvedTemplate = computed(() => resolveTemplateComponent(props.invitation.template))
+defineProps<{ invitation: PublicInvitation }>()
 </script>
 
 <template>
-  <component :is="resolvedTemplate" :invitation="invitation" />
+  <FloralTemplate :invitation="invitation" />
 </template>

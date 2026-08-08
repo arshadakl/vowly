@@ -1,17 +1,18 @@
 import type { PublicInvitation } from '@vowly/types'
 
-export function makeMockInvitation(template: 'classic' | 'luxury' = 'classic'): PublicInvitation {
+export function makeMockInvitation(): PublicInvitation {
   return {
     id: 'inv-0001',
     brideName: 'Fathima',
     groomName: 'Arshad',
     slug: 'arshad-fathima-06-08-26',
-    template,
+    template: 'floral',
     quote: 'Two souls, one journey, endless love.',
     coverImage: null,
     brideImage: null,
     groomImage: null,
     showImages: false,
+    featuredVenueEventId: 'evt-001',
     weddingDate: '2026-08-06',
     weddingTz: 'Asia/Kolkata',
     events: [
