@@ -374,13 +374,8 @@ async function showRsvps(client: Client) {
                 </td>
                 <td class="px-4 py-4">
                   <span
-                    :class="
-                      client.invitation?.template === 'luxury'
-                        ? 'bg-[#f5edff] text-[#7954a6]'
-                        : 'bg-[#edf3ff] text-[#3461bd]'
-                    "
-                    class="rounded-lg px-3 py-2 text-xs font-semibold"
-                    >{{ client.invitation?.template === 'luxury' ? 'Luxury' : 'Minimal' }}</span
+                    class="rounded-lg bg-[#f5f0e8] px-3 py-2 text-xs font-semibold text-[#8f6e3f]"
+                    >Floral</span
                   >
                 </td>
                 <td class="px-4 py-4 text-sm text-[#3e485b]">

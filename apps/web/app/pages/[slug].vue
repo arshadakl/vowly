@@ -112,7 +112,7 @@ useSeoMeta({
 <template>
   <main>
     <template v-if="invitation">
-      <section
+      <!-- <section
         class="flex flex-wrap items-center justify-center gap-3 bg-ink-900 px-6 py-4 text-xs text-white"
       >
         <button class="border border-white/30 px-4 py-2" @click="share">Share invitation</button>
@@ -151,7 +151,7 @@ useSeoMeta({
             Download .ics
           </button>
         </div>
-      </section>
+      </section> -->
       <TemplateRenderer :invitation="invitation" />
       <section
         v-if="invitation?.rsvp.enabled"

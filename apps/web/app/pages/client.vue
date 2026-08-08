@@ -101,6 +101,7 @@ async function saveDraft(showNotice = true) {
         template: draft.value.template,
         showImages: draft.value.showImages,
         rsvpEnabled: draft.value.rsvpEnabled,
+        featuredVenueEventId: draft.value.featuredVenueEventId,
         events: draft.value.events,
       },
     })
@@ -169,6 +170,7 @@ const preview = computed<PublicInvitation | null>(() => {
     brideImage: draft.value.showImages ? draft.value.brideImage : null,
     groomImage: draft.value.showImages ? draft.value.groomImage : null,
     showImages: draft.value.showImages,
+    featuredVenueEventId: draft.value.featuredVenueEventId,
     weddingDate: draft.value.weddingDate,
     weddingTz: draft.value.weddingTz,
     events: draft.value.events,
