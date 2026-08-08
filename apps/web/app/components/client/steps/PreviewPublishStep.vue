@@ -26,15 +26,23 @@ const emit = defineEmits<{ publish: []; back: [] }>()
       </div>
     </div>
     <div class="mt-7 grid gap-6 lg:grid-cols-[1fr_280px]">
-      <div class="border border-ink-900/10 bg-ivory-50 p-4">
-        <div class="mb-4 flex items-center justify-between">
+      <div class="border border-ink-900/10 bg-ivory-50 p-4 sm:p-8">
+        <div class="mb-6 flex items-center justify-between">
           <h3 class="font-display text-2xl">Invitation Preview</h3>
-          <span class="text-xs text-ink-700/65">{{ draft.template }}</span>
+          <span class="rounded-full bg-ivory-200 px-3 py-1 text-xs font-medium text-ink-700/65">{{ draft.template }}</span>
         </div>
-        <div
-          class="mx-auto max-w-[390px] overflow-hidden border border-ink-900/10 bg-white shadow-xl"
-        >
-          <TemplateRenderer v-if="preview" :invitation="preview" />
+        
+        <!-- Mobile Device Mockup Frame -->
+        <div class="mx-auto flex w-full max-w-[375px] justify-center">
+          <div class="relative h-[750px] w-full overflow-hidden rounded-[2.5rem] border-[8px] border-ink-800 bg-white shadow-2xl ring-1 ring-ink-900/10">
+            <!-- Simulated Notch -->
+            <div class="absolute left-1/2 top-0 z-50 h-6 w-32 -translate-x-1/2 rounded-b-3xl bg-ink-800"></div>
+            
+            <!-- Scrollable Viewport -->
+            <div class="h-full w-full overflow-y-auto overflow-x-hidden scroll-smooth bg-white">
+              <TemplateRenderer v-if="preview" :invitation="preview" />
+            </div>
+          </div>
         </div>
       </div>
       <aside class="space-y-4">
