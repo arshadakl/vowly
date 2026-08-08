@@ -4,8 +4,12 @@ import type { PublicInvitation } from '@vowly/types'
 const props = defineProps<{ invitation: PublicInvitation }>()
 
 const featuredEvent = computed(() => {
-  if (!props.invitation.featuredVenueEventId) return undefined
-  return props.invitation.events.find((e) => e.id === props.invitation.featuredVenueEventId)
+  if (props.invitation.featuredVenueEventId) {
+    const found = props.invitation.events.find((e) => e.id === props.invitation.featuredVenueEventId)
+    if (found) return found
+  }
+  // Fallback: first event that has a venue or address
+  return props.invitation.events.find((e) => e.venue || e.address)
 })
 </script>
 
