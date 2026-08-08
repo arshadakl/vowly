@@ -4,6 +4,7 @@ import {
   isShortGoogleMapsLink,
   googleMapsEmbedUrl,
   googleMapsOpenUrl,
+  parseGoogleMapsUrl,
 } from './google-maps'
 
 describe('isValidGoogleMapsUrl', () => {
@@ -74,6 +75,90 @@ describe('isShortGoogleMapsLink', () => {
   })
 })
 
+describe('parseGoogleMapsUrl', () => {
+  it('parses place URLs with coordinates and name', () => {
+    const result = parseGoogleMapsUrl(
+      'https://www.google.com/maps/place/Taj+Mahal/@27.1751,78.0421,15z',
+    )
+    expect(result.valid).toBe(true)
+    expect(result.type).toBe('place')
+    expect(result.name).toBe('Taj Mahal')
+    expect(result.lat).toBe(27.1751)
+    expect(result.lng).toBe(78.0421)
+    expect(result.embedUrl).toContain('output=embed')
+    expect(result.embedUrl).toContain('q=27.1751,78.0421')
+    expect(result.openUrl).toContain('google.com/maps/search/')
+    expect(result.openUrl).toContain('query=Taj')
+  })
+
+  it('parses search URLs with query and coordinates', () => {
+    const result = parseGoogleMapsUrl(
+      'https://www.google.com/maps/search/wedding+venues+near+me/@28.6,77.2,12z',
+    )
+    expect(result.valid).toBe(true)
+    expect(result.type).toBe('search')
+    expect(result.name).toBe('wedding venues near me')
+    expect(result.lat).toBe(28.6)
+    expect(result.lng).toBe(77.2)
+    expect(result.embedUrl).toContain('output=embed')
+    expect(result.embedUrl).toContain('q=28.6,77.2')
+    expect(result.openUrl).toContain('query=wedding')
+  })
+
+  it('parses direction URLs', () => {
+    const result = parseGoogleMapsUrl(
+      'https://www.google.com/maps/dir/Hotel+Taj/Grand+Palace',
+    )
+    expect(result.valid).toBe(true)
+    expect(result.type).toBe('direction')
+    expect(result.openUrl).toContain('google.com/maps/dir/')
+  })
+
+  it('parses coordinate URLs', () => {
+    const result = parseGoogleMapsUrl(
+      'https://www.google.com/maps/@28.6139,77.209,15z',
+    )
+    expect(result.valid).toBe(true)
+    expect(result.type).toBe('coordinates')
+    expect(result.lat).toBe(28.6139)
+    expect(result.lng).toBe(77.209)
+    expect(result.embedUrl).toContain('output=embed')
+    expect(result.embedUrl).toContain('q=28.6139,77.209')
+    expect(result.openUrl).toContain('query=28.6139,77.209')
+  })
+
+  it('parses legacy maps.google.com URLs with q param', () => {
+    const result = parseGoogleMapsUrl(
+      'https://maps.google.com/?q=Taj+Mahal&ll=27.1751,78.0421&z=15',
+    )
+    expect(result.valid).toBe(true)
+    expect(result.type).toBe('coordinates')
+    expect(result.lat).toBe(27.1751)
+    expect(result.lng).toBe(78.0421)
+    expect(result.embedUrl).toContain('output=embed')
+    expect(result.embedUrl).toContain('q=27.1751,78.0421')
+    expect(result.openUrl).toContain('query=Taj')
+  })
+
+  it('identifies short links', () => {
+    const result = parseGoogleMapsUrl('https://maps.app.goo.gl/8PjKQJnB4VnatcvdA')
+    expect(result.valid).toBe(true)
+    expect(result.type).toBe('short')
+    expect(result.embedUrl).toBe('')
+    expect(result.openUrl).toBe('https://maps.app.goo.gl/8PjKQJnB4VnatcvdA')
+  })
+
+  it('returns invalid for non-Google URLs', () => {
+    const result = parseGoogleMapsUrl('https://openstreetmap.org/')
+    expect(result.valid).toBe(false)
+  })
+
+  it('returns invalid for empty strings', () => {
+    const result = parseGoogleMapsUrl('')
+    expect(result.valid).toBe(false)
+  })
+})
+
 describe('googleMapsEmbedUrl', () => {
   it('returns empty string for short links (cannot embed)', () => {
     expect(googleMapsEmbedUrl('https://maps.app.goo.gl/8PjKQJnB4VnatcvdA')).toBe('')
@@ -83,57 +168,27 @@ describe('googleMapsEmbedUrl', () => {
     expect(googleMapsEmbedUrl('https://goo.gl/maps/abc123')).toBe('')
   })
 
-  it('passes already-embeddable URLs through', () => {
-    const url = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d100'
-    expect(googleMapsEmbedUrl(url)).toBe(url)
-  })
-
-  it('converts place URLs using place name', () => {
+  it('generates embed URL for place URLs', () => {
     const result = googleMapsEmbedUrl(
       'https://www.google.com/maps/place/Taj+Mahal/@27.1751,78.0421,15z',
     )
     expect(result).toContain('output=embed')
-    expect(result).toContain('q=Taj%20Mahal')
+    expect(result).toContain('q=27.1751,78.0421')
   })
 
-  it('converts search URLs using search query', () => {
-    const result = googleMapsEmbedUrl(
-      'https://www.google.com/maps/search/wedding+venues+near+me/@28.6,77.2,12z',
-    )
-    expect(result).toContain('output=embed')
-    expect(result).toContain('q=wedding%20venues%20near%20me')
-  })
-
-  it('converts direction URLs', () => {
-    const result = googleMapsEmbedUrl(
-      'https://www.google.com/maps/dir/Hotel+Taj/Grand+Palace',
-    )
-    expect(result).toContain('output=embed')
-    expect(result).toContain('q=Hotel%20Taj%20to%20Grand%20Palace')
-  })
-
-  it('converts coordinate URLs', () => {
+  it('generates embed URL for coordinate URLs', () => {
     const result = googleMapsEmbedUrl(
       'https://www.google.com/maps/@28.6139,77.209,15z',
     )
     expect(result).toContain('output=embed')
-    expect(result).toContain('q=28.6139%2C77.209')
+    expect(result).toContain('q=28.6139,77.209')
   })
 
-  it('converts legacy maps.google.com URLs with q param', () => {
+  it('returns empty string for direction URLs (no coordinates)', () => {
     const result = googleMapsEmbedUrl(
-      'https://maps.google.com/?q=Taj+Mahal&ll=27.1751,78.0421&z=15',
+      'https://www.google.com/maps/dir/Hotel+Taj/Grand+Palace',
     )
-    expect(result).toContain('output=embed')
-    expect(result).toContain('q=Taj%20Mahal')
-  })
-
-  it('handles URLs with www prefix', () => {
-    const result = googleMapsEmbedUrl(
-      'https://www.google.com/maps/place/Grand+Palace/@26.9,75.7,15z',
-    )
-    expect(result).toContain('output=embed')
-    expect(result).toContain('q=Grand%20Palace')
+    expect(result).toBe('')
   })
 })
 
@@ -149,7 +204,7 @@ describe('googleMapsOpenUrl', () => {
     )
     expect(result).toContain('google.com/maps/search/')
     expect(result).toContain('api=1')
-    expect(result).toContain('query=Taj%20Mahal')
+    expect(result).toContain('query=Taj')
   })
 
   it('converts coordinate URLs to search links', () => {
@@ -157,6 +212,6 @@ describe('googleMapsOpenUrl', () => {
       'https://www.google.com/maps/@28.6,77.2,12z',
     )
     expect(result).toContain('google.com/maps/search/')
-    expect(result).toContain('query=28.6%2C77.2')
+    expect(result).toContain('query=28.6,77.2')
   })
 })

@@ -14,20 +14,16 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export interface GoogleMapLocation {
-  latitude?: number
-  longitude?: number
-  placeId?: string
-  name?: string
-}
-
 export interface GoogleMapResult {
   valid: boolean
+  type: 'short' | 'place' | 'search' | 'coordinates' | 'direction' | 'unknown'
   originalUrl: string
-  normalizedUrl?: string
-  embedUrl?: string
-  location?: GoogleMapLocation
-  type?: 'short' | 'place' | 'search' | 'coordinates' | 'direction' | 'unknown'
+  name?: string
+  lat?: number
+  lng?: number
+  placeId?: string
+  embedUrl: string
+  openUrl: string
   error?: string
 }
 
@@ -35,17 +31,7 @@ export interface GoogleMapResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-const ALLOWED_HOSTS = new Set([
-  'google.com',
-  'www.google.com',
-  'maps.google.com',
-  'maps.app.goo.gl',
-  'goo.gl',
-])
-
 const SHORT_LINK_HOSTS = new Set(['maps.app.goo.gl', 'goo.gl'])
-
-const GOOGLE_MAP_PATH = /^\/maps(?:\/|$)/i
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -62,36 +48,37 @@ function isValidHttpUrl(value: string): boolean {
 
 function isGoogleMapsHost(hostname: string): boolean {
   const host = hostname.toLowerCase()
-  if (ALLOWED_HOSTS.has(host)) return true
+  if (SHORT_LINK_HOSTS.has(host)) return true
+  if (host === 'google.com' || host === 'www.google.com' || host === 'maps.google.com') return true
   return host.endsWith('.google.com') || host.endsWith('.googleusercontent.com')
 }
 
 function isGoogleMapsUrl(url: URL): boolean {
-  const hostname = url.hostname.toLowerCase()
-  if (!isGoogleMapsHost(hostname)) return false
-
-  if (SHORT_LINK_HOSTS.has(hostname)) return true
-
-  if (hostname === 'google.com' || hostname === 'www.google.com' || hostname === 'maps.google.com') {
-    return GOOGLE_MAP_PATH.test(url.pathname)
-  }
-
-  return false
+  return isGoogleMapsHost(url.hostname)
 }
 
-function extractCoordinates(url: URL): { latitude: number; longitude: number } | undefined {
+function extractCoordinates(url: URL): { lat: number; lng: number } | undefined {
   // /@11.1215847,76.2887387,1133m or /@11.1215847,76.2887387
   const atMatch = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/)
   if (atMatch) {
-    return { latitude: Number(atMatch[1]), longitude: Number(atMatch[2]) }
+    return { lat: Number(atMatch[1]), lng: Number(atMatch[2]) }
   }
 
-  // ?query=11.1215847,76.2887387
+  // ?query=11.1215847,76.2887387 or ?q=11.1215847,76.2887387
   const query = url.searchParams.get('query') ?? url.searchParams.get('q')
   if (query) {
     const queryMatch = query.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
     if (queryMatch) {
-      return { latitude: Number(queryMatch[1]), longitude: Number(queryMatch[2]) }
+      return { lat: Number(queryMatch[1]), lng: Number(queryMatch[2]) }
+    }
+  }
+
+  // ?ll=27.1751,78.0421
+  const ll = url.searchParams.get('ll')
+  if (ll) {
+    const llMatch = ll.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
+    if (llMatch) {
+      return { lat: Number(llMatch[1]), lng: Number(llMatch[2]) }
     }
   }
 
@@ -99,13 +86,7 @@ function extractCoordinates(url: URL): { latitude: number; longitude: number } |
 }
 
 function extractPlaceId(url: URL): string | undefined {
-  const queryPlaceId = url.searchParams.get('query_place_id')
-  if (queryPlaceId) return queryPlaceId
-
-  const placeId = url.searchParams.get('place_id')
-  if (placeId) return placeId
-
-  return undefined
+  return url.searchParams.get('query_place_id') ?? url.searchParams.get('place_id') ?? undefined
 }
 
 function extractPlaceName(url: URL): string | undefined {
@@ -128,6 +109,18 @@ function extractSearchQuery(url: URL): string | undefined {
   }
 }
 
+function extractQueryName(url: URL): string | undefined {
+  const q = url.searchParams.get('q')
+  if (!q) return undefined
+  // Don't return coordinate-only queries as names
+  if (/^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/.test(q)) return undefined
+  try {
+    return decodeURIComponent(q).replace(/\+/g, ' ')
+  } catch {
+    return undefined
+  }
+}
+
 function classifyUrl(url: URL): GoogleMapResult['type'] {
   const host = url.hostname.toLowerCase()
 
@@ -137,34 +130,70 @@ function classifyUrl(url: URL): GoogleMapResult['type'] {
   if (/\/maps\/dir\//i.test(url.pathname)) return 'direction'
   if (extractCoordinates(url)) return 'coordinates'
 
+  // maps.google.com/?q=... without /maps/ path
+  if (host === 'maps.google.com' && (url.searchParams.get('q') || url.searchParams.get('query'))) {
+    return 'search'
+  }
+
   return 'unknown'
 }
 
-function validateCoordinates(latitude?: number, longitude?: number): boolean {
-  if (latitude === undefined || longitude === undefined) return false
-  return (
-    Number.isFinite(latitude) &&
-    Number.isFinite(longitude) &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180
-  )
+function buildEmbedUrl(url: URL, type: GoogleMapResult['type']): string {
+  const coordinates = extractCoordinates(url)
+  const placeId = extractPlaceId(url)
+  const placeName = extractPlaceName(url)
+  const searchQuery = extractSearchQuery(url)
+  const queryName = extractQueryName(url)
+  const name = placeName ?? searchQuery ?? queryName
+
+  // Short links can't be embedded
+  if (type === 'short') return ''
+
+  // Direction URLs without coordinates can't be embedded simply
+  if (type === 'direction' && !coordinates) return ''
+
+  // Best case: real Place ID — use search fallback (no API key needed)
+  if (placeId) {
+    return `https://maps.google.com/maps?q=place_id:${placeId}&z=15&output=embed`
+  }
+
+  // Coordinates — most reliable for embedding
+  if (coordinates) {
+    return `https://maps.google.com/maps?q=${coordinates.lat},${coordinates.lng}&z=15&output=embed`
+  }
+
+  // Name-based query
+  if (name) {
+    return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=15&output=embed`
+  }
+
+  return ''
 }
 
-/**
- * Build an embeddable Google Maps iframe URL from coordinates.
- * This does NOT require an API key — uses the standard embed endpoint.
- */
-function embedFromCoordinates(latitude: number, longitude: number): string {
-  return `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`
-}
+function buildOpenUrl(url: URL, type: GoogleMapResult['type']): string {
+  // Short links — open directly (browser will follow redirect)
+  if (type === 'short') return url.toString()
 
-/**
- * Build an embeddable Google Maps iframe URL from a search/place query.
- */
-function embedFromQuery(query: string): string {
-  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed`
+  const coordinates = extractCoordinates(url)
+  const placeName = extractPlaceName(url)
+  const searchQuery = extractSearchQuery(url)
+  const queryName = extractQueryName(url)
+  const name = placeName ?? searchQuery ?? queryName
+
+  // Place/search names get a search link
+  if (name) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`
+  }
+
+  // Coordinates get a search link
+  if (coordinates) {
+    return `https://www.google.com/maps/search/?api=1&query=${coordinates.lat},${coordinates.lng}`
+  }
+
+  // Direction URLs — preserve the original
+  if (type === 'direction') return url.toString()
+
+  return url.toString()
 }
 
 // ---------------------------------------------------------------------------
@@ -177,78 +206,51 @@ function embedFromQuery(query: string): string {
  * Returns a `GoogleMapResult` with:
  * - `valid` — whether the URL is a recognized Google Maps URL
  * - `type` — short | place | search | coordinates | direction | unknown
+ * - `name` — extracted place name or search query
+ * - `lat`, `lng` — extracted coordinates
  * - `embedUrl` — iframe-compatible embed URL (empty for short links)
- * - `location` — extracted coordinates, place ID, and name
- * - `error` — validation error message if invalid
+ * - `openUrl` — reliable link that opens in Google Maps
  */
 export function parseGoogleMapsUrl(input: string): GoogleMapResult {
   const originalUrl = input.trim()
 
   if (!originalUrl) {
-    return { valid: false, originalUrl, error: 'URL is required.' }
+    return { valid: false, type: 'unknown', originalUrl, embedUrl: '', openUrl: '', error: 'URL is required.' }
   }
 
   if (!isValidHttpUrl(originalUrl)) {
-    return { valid: false, originalUrl, error: 'Invalid URL.' }
+    return { valid: false, type: 'unknown', originalUrl, embedUrl: '', openUrl: '', error: 'Invalid URL.' }
   }
 
   let url: URL
   try {
     url = new URL(originalUrl)
   } catch {
-    return { valid: false, originalUrl, error: 'Invalid URL.' }
+    return { valid: false, type: 'unknown', originalUrl, embedUrl: '', openUrl: '', error: 'Invalid URL.' }
   }
 
   if (!isGoogleMapsUrl(url)) {
-    return { valid: false, originalUrl, error: 'URL is not a valid Google Maps URL.' }
+    return { valid: false, type: 'unknown', originalUrl, embedUrl: '', openUrl: '', error: 'Not a Google Maps URL.' }
   }
 
   const type = classifyUrl(url)
-
-  // Short URLs cannot be parsed without following redirects server-side
-  if (type === 'short') {
-    return {
-      valid: true,
-      originalUrl,
-      normalizedUrl: url.toString(),
-      type: 'short',
-    }
-  }
-
   const coordinates = extractCoordinates(url)
   const placeId = extractPlaceId(url)
-  const name = extractPlaceName(url)
+  const placeName = extractPlaceName(url)
   const searchQuery = extractSearchQuery(url)
-
-  if (coordinates && !validateCoordinates(coordinates.latitude, coordinates.longitude)) {
-    return { valid: false, originalUrl, error: 'Invalid latitude or longitude.' }
-  }
-
-  // Build embed URL
-  let embedUrl = ''
-
-  if (placeId) {
-    // Best case: real Place ID — use search fallback (no API key needed)
-    embedUrl = embedFromQuery(`place_id:${placeId}`)
-  } else if (coordinates) {
-    embedUrl = embedFromCoordinates(coordinates.latitude, coordinates.longitude)
-  } else if (searchQuery) {
-    embedUrl = embedFromQuery(searchQuery)
-  } else if (name) {
-    embedUrl = embedFromQuery(name)
-  }
+  const queryName = extractQueryName(url)
+  const name = placeName ?? searchQuery ?? queryName
 
   return {
     valid: true,
-    originalUrl,
-    normalizedUrl: url.toString(),
-    embedUrl,
-    location: {
-      ...coordinates,
-      placeId,
-      name: name ?? searchQuery,
-    },
     type,
+    originalUrl,
+    name,
+    lat: coordinates?.lat,
+    lng: coordinates?.lng,
+    placeId: placeId ?? undefined,
+    embedUrl: buildEmbedUrl(url, type),
+    openUrl: buildOpenUrl(url, type),
   }
 }
 
@@ -271,13 +273,10 @@ export function isShortGoogleMapsLink(url: string): boolean {
  * Convert any Google Maps URL to an embeddable iframe src.
  *
  * - Short links return empty string (use isShortGoogleMapsLink to detect).
- * - Embed-ready URLs (/maps/embed?pb=...) are returned as-is.
  * - All other formats are parsed and converted to a fallback embed URL.
  */
 export function googleMapsEmbedUrl(url: string): string {
-  const result = parseGoogleMapsUrl(url)
-  if (!result.valid) return ''
-  return result.embedUrl ?? ''
+  return parseGoogleMapsUrl(url).embedUrl
 }
 
 /**
@@ -285,21 +284,5 @@ export function googleMapsEmbedUrl(url: string): string {
  * Useful as a fallback button when the embed fails to load.
  */
 export function googleMapsOpenUrl(url: string): string {
-  const result = parseGoogleMapsUrl(url)
-  if (!result.valid) return '#'
-
-  // Short links — open directly (browser will follow redirect)
-  if (result.type === 'short') return result.originalUrl
-
-  // For coordinates, build a reliable search link
-  if (result.location?.latitude && result.location?.longitude) {
-    return `https://www.google.com/maps/search/?api=1&query=${result.location.latitude},${result.location.longitude}`
-  }
-
-  // For place names or search queries
-  if (result.location?.name) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(result.location.name)}`
-  }
-
-  return result.normalizedUrl ?? result.originalUrl
+  return parseGoogleMapsUrl(url).openUrl
 }
