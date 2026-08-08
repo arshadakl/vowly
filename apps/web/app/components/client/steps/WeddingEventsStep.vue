@@ -1,22 +1,48 @@
 <script setup lang="ts">
-import { CalendarDays, Lightbulb, MapPin, Plus, Trash2, Clipboard, ExternalLink, AlertCircle } from 'lucide-vue-next'
+import { CalendarDays, Lightbulb, MapPin, Plus, Trash2, Clipboard, ExternalLink, AlertCircle, Loader2 } from 'lucide-vue-next'
 import { isValidGoogleMapsUrl, isShortGoogleMapsLink, googleMapsEmbedUrl, googleMapsOpenUrl } from '@vowly/utils'
 import type { EditorInvitation } from '~/types/client-wizard'
 
 const props = defineProps<{ draft: EditorInvitation; locked: boolean }>()
 const draft = computed(() => props.draft)
+const api = useApi()
 
 const inputClass = 'mt-2 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500'
+const resolvingUrls = ref<Set<string>>(new Set())
 
 function generateEmbedUrl(googleMapUrl: string | null | undefined): string | null {
   if (!googleMapUrl || !isValidGoogleMapsUrl(googleMapUrl)) return null
   return googleMapsEmbedUrl(googleMapUrl) || null
 }
 
-onMounted(() => {
+async function resolveShortLink(url: string): Promise<string | null> {
+  try {
+    const result = await api<{ url: string }>('/google-maps/resolve', {
+      method: 'POST',
+      body: { url },
+    })
+    return result.url
+  } catch {
+    return null
+  }
+}
+
+onMounted(async () => {
   for (const event of draft.value.events) {
     if (event.googleMapUrl && !event.googleMapEmbedUrl) {
-      event.googleMapEmbedUrl = generateEmbedUrl(event.googleMapUrl)
+      if (isShortGoogleMapsLink(event.googleMapUrl)) {
+        resolvingUrls.value.add(event.googleMapUrl)
+        try {
+          const resolved = await resolveShortLink(event.googleMapUrl)
+          if (resolved) {
+            event.googleMapEmbedUrl = generateEmbedUrl(resolved)
+          }
+        } finally {
+          resolvingUrls.value.delete(event.googleMapUrl)
+        }
+      } else {
+        event.googleMapEmbedUrl = generateEmbedUrl(event.googleMapUrl)
+      }
     }
   }
 })
@@ -56,17 +82,38 @@ function moveEvent(index: number, direction: -1 | 1) {
   })
 }
 
-function onGoogleMapUrlChange(event: EditorInvitation['events'][number]) {
-  event.googleMapEmbedUrl = generateEmbedUrl(event.googleMapUrl)
+async function onGoogleMapUrlChange(event: EditorInvitation['events'][number]) {
+  const url = event.googleMapUrl
+  if (!url || !isValidGoogleMapsUrl(url)) {
+    event.googleMapEmbedUrl = null
+    return
+  }
+
+  if (isShortGoogleMapsLink(url)) {
+    resolvingUrls.value.add(url)
+    try {
+      const resolved = await resolveShortLink(url)
+      if (resolved && event.googleMapUrl === url) {
+        event.googleMapEmbedUrl = generateEmbedUrl(resolved)
+      }
+    } finally {
+      resolvingUrls.value.delete(url)
+    }
+  } else {
+    event.googleMapEmbedUrl = generateEmbedUrl(url)
+  }
 }
 
-function pasteFromClipboard(event: { googleMapUrl?: string | null; googleMapEmbedUrl?: string | null }) {
-  navigator.clipboard.readText().then((text) => {
+async function pasteFromClipboard(event: { googleMapUrl?: string | null; googleMapEmbedUrl?: string | null }) {
+  try {
+    const text = await navigator.clipboard.readText()
     if (text) {
       event.googleMapUrl = text.trim()
-      event.googleMapEmbedUrl = generateEmbedUrl(text.trim())
+      await onGoogleMapUrlChange(event as EditorInvitation['events'][number])
     }
-  }).catch(() => {})
+  } catch {
+    // Clipboard access denied or empty
+  }
 }
 </script>
 
@@ -217,6 +264,39 @@ function pasteFromClipboard(event: { googleMapUrl?: string | null; googleMapEmbe
             </div>
             <a
               :href="googleMapsOpenUrl(event.googleMapUrl)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-2 inline-flex items-center gap-1 text-xs text-gold-600 hover:underline"
+            >Open in Google Maps <ExternalLink class="h-3 w-3" /></a>
+          </div>
+          <div
+            v-else-if="event.googleMapUrl && isValidGoogleMapsUrl(event.googleMapUrl) && isShortGoogleMapsLink(event.googleMapUrl) && resolvingUrls.has(event.googleMapUrl)"
+            class="sm:col-span-2"
+          >
+            <div class="flex items-center gap-4 border border-ink-900/10 bg-ivory-50 px-5 py-4">
+              <Loader2 class="h-8 w-8 shrink-0 text-gold-600 animate-spin" />
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-ink-900">Resolving map link...</p>
+                <p class="mt-0.5 truncate text-xs text-ink-700/60">{{ event.googleMapUrl }}</p>
+              </div>
+            </div>
+          </div>
+          <div
+            v-else-if="event.googleMapUrl && isValidGoogleMapsUrl(event.googleMapUrl) && isShortGoogleMapsLink(event.googleMapUrl) && event.googleMapEmbedUrl"
+            class="sm:col-span-2"
+          >
+            <div class="overflow-hidden border border-ink-900/10">
+              <iframe
+                :src="event.googleMapEmbedUrl"
+                width="100%"
+                height="250"
+                style="border: 0"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+              />
+            </div>
+            <a
+              :href="event.googleMapUrl"
               target="_blank"
               rel="noopener noreferrer"
               class="mt-2 inline-flex items-center gap-1 text-xs text-gold-600 hover:underline"
