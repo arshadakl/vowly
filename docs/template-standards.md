@@ -28,12 +28,13 @@ defineProps<{ invitation: PublicInvitation }>()
 | `brideName` | `string` | Yes | Plain text, max 60 chars | Primary heading. Always visible. |
 | `groomName` | `string` | Yes | Plain text, max 60 chars | Primary heading. Always visible. Paired with brideName using `&`. |
 | `slug` | `string` | Yes | URL-safe slug | Used for share URLs. Never displayed visually in the template. |
-| `template` | `TemplateId` | Yes | `'classic' \| 'luxury'` | Determines which component renders. Not displayed. |
+| `template` | `TemplateId` | Yes | `'classic' \| 'luxury' \| 'floral'` | Determines which component renders. Not displayed. |
 | `quote` | `string \| null` | No | Plain text, max 300 chars | Italic subtitle below names. Wrap in curly quotes. Conditional: `v-if="invitation.quote"` |
 | `coverImage` | `string \| null` | No | URL, max 500 chars | Hero background image. Reserved for future use. |
 | `brideImage` | `string \| null` | No | URL, max 500 chars | Portrait photo. Reserved for future use. |
 | `groomImage` | `string \| null` | No | URL, max 500 chars | Portrait photo. Reserved for future use. |
 | `showImages` | `boolean` | Yes | `true \| false` | Controls whether image sections render. Reserved for future use. |
+| `featuredVenueEventId` | `string \| null` | No | UUID | Event ID whose venue is featured in a dedicated venue section. Used by `floral` template. When `null`, venue section is hidden. Templates look up the matching event in `events`. |
 | `weddingDate` | `string` | Yes | `YYYY-MM-DD` calendar date | Display as `'MMMM D, YYYY'` (e.g. "August 6, 2026"). Also used for countdown. |
 | `weddingTz` | `string` | Yes | IANA timezone (e.g. `'Asia/Kolkata'`) | Used by CountdownTimer. Not displayed directly. |
 | `events` | `InvitationEvent[]` | Yes | Array (0 or more items) | Rendered as event cards. See section 3. |

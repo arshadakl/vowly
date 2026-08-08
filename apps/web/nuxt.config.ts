@@ -4,6 +4,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-08-01',
   devtools: { enabled: false },
   modules: ['@nuxt/eslint', '@vueuse/nuxt'],
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false,
+    },
+  ],
   css: ['~/assets/css/main.css'],
   nitro: {
     preset: 'cloudflare-pages',
