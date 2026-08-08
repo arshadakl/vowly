@@ -13,12 +13,21 @@
   --color-ivory-50: #fbf9f5;
   --color-ivory-100: #f5f0e8;
   --color-ivory-200: #efe7d7;
+  --color-gold-200: #f0dfa8;
   --color-gold-400: #d4af37;
   --color-gold-500: #b08d57;
   --color-gold-600: #8f6e3f;
   --color-ink-700: #3d362c;
   --color-ink-800: #2b2620;
   --color-ink-900: #1c1813;
+
+  --color-burgundy-900: #300813;
+  --color-burgundy-800: #4a1523;
+  --color-dustypink: #d88fa3;
+
+  --font-script: 'Great Vibes', cursive;
+  --font-serif-cinzel: 'Cinzel', serif;
+  --font-sans-lato: 'Lato', sans-serif;
 }
 
 @layer base {
