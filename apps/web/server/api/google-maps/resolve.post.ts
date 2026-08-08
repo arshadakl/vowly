@@ -16,13 +16,25 @@ export default defineEventHandler(async (event) => {
     apiError('INVALID_INPUT', 'Only Google Maps URLs are supported.', 400)
   }
 
+  // If it's already a full Google Maps URL (not a short link), return it as-is
+  if (!isShortLink) {
+    return { url: url! }
+  }
+
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+
     const response = await fetch(url!, {
       redirect: 'follow',
+      signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; VowlyBot/1.0)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
     })
+
+    clearTimeout(timeout)
 
     const resolvedUrl = response.url
     const resolvedHostname = new URL(resolvedUrl).hostname.toLowerCase()
@@ -34,6 +46,6 @@ export default defineEventHandler(async (event) => {
 
     return { url: resolvedUrl }
   } catch {
-    apiError('RESOLVE_FAILED', 'Could not resolve the Google Maps URL.', 500)
+    apiError('RESOLVE_FAILED', 'Could not resolve the Google Maps URL. Please try pasting the full Google Maps link instead.', 500)
   }
 })
