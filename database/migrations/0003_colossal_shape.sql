@@ -1,0 +1,1 @@
+ALTER TABLE `invitations` ADD `featured_venue_event_id` text;

@@ -42,9 +42,9 @@ export const invitations = sqliteTable(
     brideName: text('bride_name').notNull().default(''),
     groomName: text('groom_name').notNull().default(''),
     slug: text('slug').unique(),
-    template: text('template', { enum: ['classic', 'luxury'] })
+    template: text('template', { enum: ['floral'] })
       .notNull()
-      .default('classic'),
+      .default('floral'),
     coverImage: text('cover_image'),
     brideImage: text('bride_image'),
     groomImage: text('groom_image'),
@@ -52,6 +52,7 @@ export const invitations = sqliteTable(
     quote: text('quote'),
     editOverride: text('edit_override', { enum: ['force_open', 'force_locked'] }),
     rsvpEnabled: integer('rsvp_enabled', { mode: 'boolean' }).notNull().default(false),
+    featuredVenueEventId: text('featured_venue_event_id'),
     published: integer('published', { mode: 'boolean' }).notNull().default(false),
     publishedAt: text('published_at'),
     ogImageUrl: text('og_image_url'),

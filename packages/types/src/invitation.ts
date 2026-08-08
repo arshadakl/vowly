@@ -1,18 +1,19 @@
 import { z } from 'zod'
 import { EDIT_OVERRIDES, type EditOverride } from './enums'
-import { templateIdSchema, type TemplateId } from './template'
+import { type TemplateId } from './template'
 import { eventInputSchema, type InvitationEvent } from './event'
 
 export const invitationUpdateSchema = z.object({
   brideName: z.string().trim().max(60).default(''),
   groomName: z.string().trim().max(60).default(''),
   quote: z.string().trim().max(300).nullable().optional(),
-  template: templateIdSchema.default('classic'),
+  template: z.string().default('floral'),
   coverImage: z.string().max(500).nullable().optional(),
   brideImage: z.string().max(500).nullable().optional(),
   groomImage: z.string().max(500).nullable().optional(),
   showImages: z.boolean().optional(),
   rsvpEnabled: z.boolean().optional(),
+  featuredVenueEventId: z.string().uuid().nullable().optional(),
   events: z.array(eventInputSchema).optional(),
 })
 
@@ -81,6 +82,13 @@ export interface PublicInvitation {
   groomImage: string | null
   /** Controls whether image sections render. Reserved for future use. */
   showImages: boolean
+  /**
+   * The event ID whose venue should be featured in a dedicated venue section.
+   * Used by templates like `floral` that display a single venue with a map.
+   * When `null`, the venue section is hidden. When set, the template looks up
+   * the matching event in `events` and renders its venue/address/map.
+   */
+  featuredVenueEventId: string | null
   /** Wedding date as YYYY-MM-DD. Display as 'MMMM D, YYYY'. Used by countdown. */
   weddingDate: string
   /** IANA timezone (e.g. 'Asia/Kolkata'). Used by CountdownTimer only. */

@@ -56,7 +56,7 @@ export interface Client {
     created: boolean
     published: boolean
     slug: string | null
-    template?: 'classic' | 'luxury'
+    template?: 'floral'
     publishedAt?: string | null
   }
 }

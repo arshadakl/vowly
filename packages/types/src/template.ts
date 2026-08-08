@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const TEMPLATE_IDS = ['classic', 'luxury'] as const
+export const TEMPLATE_IDS = ['floral'] as const
 export const templateIdSchema = z.enum(TEMPLATE_IDS)
 export type TemplateId = z.infer<typeof templateIdSchema>
 
@@ -19,16 +19,10 @@ export interface TemplateDefinition {
 
 export const TEMPLATE_DEFINITIONS: readonly TemplateDefinition[] = [
   {
-    id: 'classic',
-    name: 'Classic',
-    description: 'Timeless serif elegance with a soft ivory palette.',
-    ogTheme: { background: '#faf7f2', foreground: '#2b2620', accent: '#b08d57' },
-  },
-  {
-    id: 'luxury',
-    name: 'Luxury',
-    description: 'Dark, dramatic and gold — for grand celebrations.',
-    ogTheme: { background: '#14100c', foreground: '#f5ead6', accent: '#d4af37' },
+    id: 'floral',
+    name: 'Floral',
+    description: 'Warm ivory with gold accents and botanical charm.',
+    ogTheme: { background: '#faf5ef', foreground: '#2b2620', accent: '#b08d57' },
   },
 ] as const
 
