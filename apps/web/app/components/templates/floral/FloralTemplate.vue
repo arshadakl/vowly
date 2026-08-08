@@ -14,11 +14,11 @@ const featuredEvent = computed(() => {
 </script>
 
 <template>
-  <article class="min-h-screen bg-[#faf5ef] text-ink-800">
+  <article class="@container min-h-screen bg-[#faf5ef] text-ink-800">
     <FloralHero :invitation="invitation" />
 
-    <section class="bg-white px-6 py-12">
-      <CountdownTimer :target="invitation.weddingDate" :time-zone="invitation.weddingTz" />
+    <section class="relative z-20 -mt-8 px-6 pb-12 sm:-mt-12">
+      <FloralCountdown :target="invitation.weddingDate" :time-zone="invitation.weddingTz" />
     </section>
 
     <FloralTimeline :events="invitation.events" />
@@ -30,3 +30,11 @@ const featuredEvent = computed(() => {
     <FloralFooter :studio="invitation.studio" />
   </article>
 </template>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+.font-playfair {
+  font-family: 'Playfair Display', serif;
+}
+</style>
