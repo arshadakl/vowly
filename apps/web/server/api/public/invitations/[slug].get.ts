@@ -39,6 +39,7 @@ export default defineEventHandler(async (event) => {
       end_time: string | null
       venue: string | null
       google_map: string | null
+      google_map_embed: string | null
       address: string | null
       notes: string | null
       sort_order: number
@@ -66,6 +67,7 @@ export default defineEventHandler(async (event) => {
       endTime: item.end_time,
       venue: item.venue,
       googleMapUrl: item.google_map,
+      googleMapEmbedUrl: item.google_map_embed,
       address: item.address,
       notes: item.notes,
       sortOrder: item.sort_order,

@@ -7,13 +7,12 @@ const props = defineProps<{
   event: PublicInvitation['events'][number] | undefined
 }>()
 
-const mapResult = computed(() => {
-  if (!props.event?.googleMapUrl) return null
-  return parseGoogleMapsUrl(props.event.googleMapUrl)
+const isShortLink = computed(() => {
+  if (!props.event?.googleMapUrl) return false
+  return parseGoogleMapsUrl(props.event.googleMapUrl).type === 'short'
 })
 
-const embedSrc = computed(() => mapResult.value?.embedUrl ?? '')
-const isShortLink = computed(() => mapResult.value?.type === 'short')
+const embedSrc = computed(() => props.event?.googleMapEmbedUrl ?? '')
 
 const openUrl = computed(() => {
   if (!props.event?.googleMapUrl) return '#'

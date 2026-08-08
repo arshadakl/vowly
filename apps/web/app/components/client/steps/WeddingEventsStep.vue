@@ -8,6 +8,11 @@ const draft = computed(() => props.draft)
 
 const inputClass = 'mt-2 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500'
 
+function generateEmbedUrl(googleMapUrl: string | null | undefined): string | null {
+  if (!googleMapUrl || !isValidGoogleMapsUrl(googleMapUrl)) return null
+  return googleMapsEmbedUrl(googleMapUrl) || null
+}
+
 function addEvent() {
   draft.value.events.push({
     id: crypto.randomUUID(),
@@ -18,6 +23,7 @@ function addEvent() {
     endTime: null,
     venue: null,
     googleMapUrl: null,
+    googleMapEmbedUrl: null,
     address: null,
     notes: null,
     sortOrder: draft.value.events.length,
@@ -42,9 +48,16 @@ function moveEvent(index: number, direction: -1 | 1) {
   })
 }
 
-function pasteFromClipboard(event: { googleMapUrl?: string | null }) {
+function onGoogleMapUrlChange(event: EditorInvitation['events'][number]) {
+  event.googleMapEmbedUrl = generateEmbedUrl(event.googleMapUrl)
+}
+
+function pasteFromClipboard(event: { googleMapUrl?: string | null; googleMapEmbedUrl?: string | null }) {
   navigator.clipboard.readText().then((text) => {
-    if (text) event.googleMapUrl = text.trim()
+    if (text) {
+      event.googleMapUrl = text.trim()
+      event.googleMapEmbedUrl = generateEmbedUrl(text.trim())
+    }
   }).catch(() => {})
 }
 </script>
@@ -161,6 +174,7 @@ function pasteFromClipboard(event: { googleMapUrl?: string | null }) {
                 :disabled="locked"
                 :class="inputClass + ' flex-1'"
                 placeholder="https://maps.app.goo.gl/..."
+                @input="onGoogleMapUrlChange(event)"
               >
               <button
                 type="button"
@@ -185,7 +199,7 @@ function pasteFromClipboard(event: { googleMapUrl?: string | null }) {
           >
             <div class="overflow-hidden border border-ink-900/10">
               <iframe
-                :src="googleMapsEmbedUrl(event.googleMapUrl)"
+                :src="event.googleMapEmbedUrl || googleMapsEmbedUrl(event.googleMapUrl)"
                 width="100%"
                 height="250"
                 style="border: 0"

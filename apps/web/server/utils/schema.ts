@@ -78,6 +78,7 @@ export const events = sqliteTable(
     endTime: text('end_time'),
     venue: text('venue'),
     googleMap: text('google_map'),
+    googleMapEmbed: text('google_map_embed'),
     address: text('address'),
     notes: text('notes'),
     sortOrder: integer('sort_order').notNull().default(0),

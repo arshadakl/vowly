@@ -9,6 +9,7 @@ export const eventInputSchema = z
     endTime: timeSchema.nullable().optional(),
     venue: z.string().trim().max(120).nullable().optional(),
     googleMapUrl: z.string().url().max(500).nullable().optional(),
+    googleMapEmbedUrl: z.string().max(1000).nullable().optional(),
     address: z.string().trim().max(500).nullable().optional(),
     notes: z.string().trim().max(1000).nullable().optional(),
     sortOrder: z.number().int().min(0).default(0),
@@ -32,7 +33,7 @@ export type EventInput = z.infer<typeof eventInputSchema>
  * The array can be empty (0 items). Events arrive pre-sorted by `sortOrder`.
  *
  * Required fields: `title`, `eventDate`, `sortOrder`
- * Optional fields: `startTime`, `endTime`, `venue`, `googleMapUrl`, `address`, `notes`
+ * Optional fields: `startTime`, `endTime`, `venue`, `googleMapUrl`, `googleMapEmbedUrl`, `address`, `notes`
  * Internal fields: `id`, `invitationId` — never display to guests.
  *
  * Date format: `YYYY-MM-DD`. Display as `'MMMM D, YYYY'`.
