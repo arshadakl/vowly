@@ -147,13 +147,11 @@ function classifyUrl(url: URL): GoogleMapResult['type'] {
 }
 
 /**
- * Build an embeddable Google Maps URL using the pb format.
- * This is the actual format Google Maps uses for iframe embeds.
+ * Build an embeddable Google Maps URL.
+ * Uses the query-based format which works reliably across origins.
  */
-function buildEmbedUrl(latitude: number, longitude: number, placeId?: string): string {
-  const timestamp = Date.now()
-  const placeIdSegment = placeId ? `!1s${placeId}!2s` : '!1s!2s'
-  return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d${longitude}!3d${latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!${placeIdSegment}!5e1!3m2!1sen!2sin!4v${timestamp}!5m2!1sen!2sin`
+function buildEmbedUrl(latitude: number, longitude: number, _placeId?: string): string {
+  return `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed&t=&ie=UTF8&iwloc=&hl=en`
 }
 
 function buildOpenUrl(url: URL, type: GoogleMapResult['type']): string {
