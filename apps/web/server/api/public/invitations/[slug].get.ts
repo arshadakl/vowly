@@ -14,12 +14,13 @@ export default defineEventHandler(async (event) => {
       bride_name: string
       groom_name: string
       slug: string
-      template: 'classic' | 'luxury'
+      template: 'floral'
       quote: string | null
       cover_image: string | null
       bride_image: string | null
       groom_image: string | null
       show_images: boolean
+      featured_venue_event_id: string | null
       wedding_date: string
       wedding_tz: string
       rsvp_enabled: boolean
@@ -47,12 +48,13 @@ export default defineEventHandler(async (event) => {
     brideName: row!.bride_name,
     groomName: row!.groom_name,
     slug: row!.slug,
-    template: row!.template,
+    template: 'floral' as const,
     quote: row!.quote,
     coverImage: row!.cover_image,
     brideImage: row!.bride_image,
     groomImage: row!.groom_image,
     showImages: Boolean(row!.show_images),
+    featuredVenueEventId: row!.featured_venue_event_id,
     weddingDate: row!.wedding_date,
     weddingTz: row!.wedding_tz,
     events: events.results.map((item) => ({
