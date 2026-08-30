@@ -67,9 +67,13 @@ if (local) {
   const quoteSql = (value: string) => `'${value.replace(/'/g, "''")}'`
   const sql = `INSERT INTO admins (id, username, password_hash, created_at) VALUES (${quoteSql(id)}, ${quoteSql(username)}, ${quoteSql(hash)}, CURRENT_TIMESTAMP) ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash;`
 
+  const tmpFile = join(process.cwd(), '.tmp-sql-command.sql')
+  const { writeFileSync, unlinkSync } = await import('node:fs')
+  writeFileSync(tmpFile, sql, 'utf-8')
+
   const commandArgs = ['d1', 'execute', dbName, '--remote']
   if (env) commandArgs.push('--env', env)
-  commandArgs.push('--config', 'wrangler.toml', '--command', sql)
+  commandArgs.push('--config', 'wrangler.toml', '--file', tmpFile)
 
   console.log(`Seeding admin "${username}" into remote database "${dbName}"...`)
   try {
@@ -82,5 +86,7 @@ if (local) {
   } catch (err) {
     console.error('Seeding failed:', err instanceof Error ? err.message : err)
     process.exit(1)
+  } finally {
+    try { unlinkSync(tmpFile) } catch {}
   }
 }
