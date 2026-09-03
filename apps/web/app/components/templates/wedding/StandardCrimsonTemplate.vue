@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss } from '@vowly/utils'
 import { Calendar, MapPin, Clock, Sparkles, Heart, Navigation, CalendarCheck } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -110,7 +110,7 @@ provide('invitation', inv)
       '--accent': def.ogTheme.accent,
       '--gold': '#E8C882',
       backgroundColor: '#F9F5EE',
-      fontFamily: `'Cormorant Garamond', 'Playfair Display', Georgia, serif`,
+      fontFamily: fontIdToCss(inv.customization?.fontFamily),
     }"
   >
     <!-- ==================== HERO SECTION ==================== -->
