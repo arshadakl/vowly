@@ -1,10 +1,33 @@
 @import 'tailwindcss';
+@import '@fontsource/alex-brush/400.css';
+@import '@fontsource/amiri/400.css';
+@import '@fontsource/amiri/700.css';
+@import '@fontsource/cinzel/400.css';
+@import '@fontsource/cinzel/600.css';
 @import '@fontsource/cormorant-garamond/400.css';
 @import '@fontsource/cormorant-garamond/500.css';
 @import '@fontsource/cormorant-garamond/600.css';
+@import '@fontsource/italiana/400.css';
 @import '@fontsource/jost/300.css';
 @import '@fontsource/jost/400.css';
 @import '@fontsource/jost/500.css';
+@import '@fontsource/noto-serif-malayalam/400.css';
+@import '@fontsource/pinyon-script/400.css';
+@import '@fontsource/plus-jakarta-sans/400.css';
+@import '@fontsource/plus-jakarta-sans/600.css';
+@import '@fontsource/great-vibes/400.css';
+@import '@fontsource/lora/400.css';
+@import '@fontsource/lora/500.css';
+@import '@fontsource/lora/600.css';
+@import '@fontsource/lora/400-italic.css';
+@import '@fontsource/montserrat/300.css';
+@import '@fontsource/montserrat/400.css';
+@import '@fontsource/montserrat/500.css';
+@import '@fontsource/montserrat/600.css';
+@import '@fontsource/playfair-display/400.css';
+@import '@fontsource/playfair-display/500.css';
+@import '@fontsource/playfair-display/600.css';
+@import '@fontsource/allura/400.css';
 
 @theme {
   --font-display: 'Cormorant Garamond', Georgia, serif;
@@ -21,17 +44,144 @@
   --color-ink-800: #2b2620;
   --color-ink-900: #1c1813;
 
-  --color-burgundy-900: #300813;
-  --color-burgundy-800: #4a1523;
   --color-dustypink: #d88fa3;
 
   --font-script: 'Great Vibes', cursive;
   --font-serif-cinzel: 'Cinzel', serif;
   --font-sans-lato: 'Lato', sans-serif;
+  --font-serif-playfair: 'Playfair Display', Georgia, serif;
+  --font-serif-lora: 'Lora', Georgia, serif;
+  --font-sans-montserrat: 'Montserrat', sans-serif;
+  --font-cursive-allura: 'Allura', cursive;
+  --font-cursive-alex: 'Alex Brush', cursive;
 }
 
 @layer base {
   body {
     @apply font-sans antialiased text-ink-900 bg-ivory-50;
+  }
+}
+
+@layer components {
+  .saas-button {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    background: #4f46e5;
+    padding: 0.625rem 1rem;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    transition:
+      background-color 150ms ease,
+      box-shadow 150ms ease,
+      opacity 150ms ease;
+  }
+
+  .saas-button:hover:not(:disabled) {
+    background: #4338ca;
+    box-shadow: 0 4px 12px rgb(79 70 229 / 18%);
+  }
+
+  .saas-button:focus-visible,
+  .saas-button-secondary:focus-visible,
+  .saas-icon-button:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+
+  .saas-button:disabled,
+  .saas-button-secondary:disabled,
+  .saas-icon-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .saas-button-secondary {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid #dbe1ea;
+    border-radius: 0.5rem;
+    background: white;
+    padding: 0.625rem 1rem;
+    color: #334155;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .saas-button-secondary:hover:not(:disabled) {
+    border-color: #a5b4fc;
+    background: #f8faff;
+    color: #4338ca;
+  }
+
+  .saas-icon-button {
+    display: inline-flex;
+    height: 2.25rem;
+    width: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dbe1ea;
+    border-radius: 0.5rem;
+    background: white;
+    color: #64748b;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .saas-icon-button:hover:not(:disabled) {
+    border-color: #a5b4fc;
+    background: #f8faff;
+    color: #4338ca;
+  }
+
+  .saas-input {
+    width: 100%;
+    border: 1px solid #dbe1ea;
+    border-radius: 0.5rem;
+    background: white;
+    padding: 0.6875rem 0.875rem;
+    color: #0f172a;
+    outline: none;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .saas-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .saas-input:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgb(129 140 248 / 18%);
+  }
+
+  .saas-input:disabled {
+    cursor: not-allowed;
+    background: #f8fafc;
+    color: #94a3b8;
+  }
+
+  .client-dashboard {
+    font-family: var(--font-sans);
+  }
+
+  .client-dashboard .font-display {
+    font-family: var(--font-sans);
   }
 }
