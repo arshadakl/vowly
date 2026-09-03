@@ -1,4 +1,4 @@
-import type { PublicInvitation } from '@vowly/types'
+import { DEFAULT_TEMPLATE_CUSTOMIZATION, type PublicInvitation } from '@vowly/types'
 
 export function makeMockInvitation(): PublicInvitation {
   return {
@@ -6,12 +6,15 @@ export function makeMockInvitation(): PublicInvitation {
     brideName: 'Fathima',
     groomName: 'Arshad',
     slug: 'arshad-fathima-06-08-26',
-    template: 'floral',
+    template: 'royal-nikah',
+    brideParents: 'Daughter of Amina & Basheer',
+    groomParents: 'Son of Fathima & Kareem',
     quote: 'Two souls, one journey, endless love.',
     coverImage: null,
     brideImage: null,
     groomImage: null,
     showImages: false,
+    coupleImageUrl: null,
     featuredVenueEventId: 'evt-001',
     weddingDate: '2026-08-06',
     weddingTz: 'Asia/Kolkata',
@@ -44,6 +47,7 @@ export function makeMockInvitation(): PublicInvitation {
       },
     ],
     rsvp: { enabled: true },
+    customization: DEFAULT_TEMPLATE_CUSTOMIZATION,
     ogImageUrl: null,
     studio: {
       name: 'Dream Frame Photography',
