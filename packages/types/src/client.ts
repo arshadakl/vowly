@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { CLIENT_STATUSES, type ClientStatus } from './enums'
+import type { TemplateId } from './template'
 import { calendarDateSchema } from './date'
 
 export function normalizePhone(value: string): string {
@@ -56,7 +57,7 @@ export interface Client {
     created: boolean
     published: boolean
     slug: string | null
-    template?: 'floral'
+    template?: TemplateId
     publishedAt?: string | null
   }
 }

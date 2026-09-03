@@ -1,13 +1,20 @@
 import { z } from 'zod'
 import { EDIT_OVERRIDES, type EditOverride } from './enums'
-import { type TemplateId } from './template'
+import {
+  templateCustomizationSchema,
+  templateIdSchema,
+  type TemplateCustomization,
+  type TemplateId,
+} from './template'
 import { eventInputSchema, type InvitationEvent } from './event'
 
 export const invitationUpdateSchema = z.object({
   brideName: z.string().trim().max(60).default(''),
   groomName: z.string().trim().max(60).default(''),
+  brideParents: z.string().trim().max(160).nullable().optional(),
+  groomParents: z.string().trim().max(160).nullable().optional(),
   quote: z.string().trim().max(300).nullable().optional(),
-  template: z.string().default('floral'),
+  template: templateIdSchema.nullable().optional(),
   coverImage: z.string().max(500).nullable().optional(),
   brideImage: z.string().max(500).nullable().optional(),
   groomImage: z.string().max(500).nullable().optional(),
@@ -15,6 +22,21 @@ export const invitationUpdateSchema = z.object({
   rsvpEnabled: z.boolean().optional(),
   featuredVenueEventId: z.string().uuid().nullable().optional(),
   events: z.array(eventInputSchema).optional(),
+})
+
+export const templateCustomizationUpdateSchema = z.object({
+  template: templateIdSchema,
+  customization: templateCustomizationSchema,
+})
+
+export const cloudinaryUploadConfirmationSchema = z.object({
+  assetId: z.string().trim().min(1).max(255),
+  publicId: z.string().trim().min(1).max(255),
+  version: z.number().int().positive(),
+  format: z.enum(['jpg', 'jpeg', 'png', 'webp', 'avif']),
+  width: z.number().int().positive().max(5000),
+  height: z.number().int().positive().max(5000),
+  bytes: z.number().int().positive().max(10_000_000),
 })
 
 export const editOverrideSchema = z.enum(EDIT_OVERRIDES)
@@ -30,7 +52,9 @@ export interface Invitation {
   brideName: string
   groomName: string
   slug: string | null
-  template: TemplateId
+  template: TemplateId | null
+  brideParents: string | null
+  groomParents: string | null
   coverImage: string | null
   brideImage: string | null
   groomImage: string | null
@@ -52,14 +76,13 @@ export interface Invitation {
  * - **Identity**: `id`, `slug`, `template` — never displayed in templates
  * - **Names**: `brideName`, `groomName` — always visible, primary heading
  * - **Optional text**: `quote` — conditional (`v-if`)
- * - **Images**: `coverImage`, `brideImage`, `groomImage`, `showImages` — reserved, not yet used
+ * - **Images**: `coverImage`, `brideImage`, `groomImage`, `showImages` — optional when enabled
  * - **Date**: `weddingDate` (YYYY-MM-DD), `weddingTz` (IANA timezone)
  * - **Events**: `events` array — can be 0..N items, each is an `InvitationEvent`
  * - **RSVP**: `rsvp.enabled` — controls RSVP form visibility
  * - **Footer**: `studio` — photography credits (name, instagram, phone)
  * - **OG**: `ogImageUrl` — social sharing image, never displayed in template
  *
- * @see docs/template-standards.md for full rendering rules
  */
 export interface PublicInvitation {
   /** Internal UUID. Never display to guests. */
@@ -68,6 +91,8 @@ export interface PublicInvitation {
   brideName: string
   /** Groom's name. Plain text, max 60 chars. Always visible. */
   groomName: string
+  brideParents: string | null
+  groomParents: string | null
   /** URL-safe slug for the public page. Never displayed in template. */
   slug: string
   /** Template ID. Determines which component renders. Not displayed. */
@@ -82,9 +107,10 @@ export interface PublicInvitation {
   groomImage: string | null
   /** Controls whether image sections render. Reserved for future use. */
   showImages: boolean
+  coupleImageUrl: string | null
   /**
    * The event ID whose venue should be featured in a dedicated venue section.
-   * Used by templates like `floral` that display a single venue with a map.
+   * Used by invitation designs that display a dedicated featured venue section.
    * When `null`, the venue section is hidden. When set, the template looks up
    * the matching event in `events` and renders its venue/address/map.
    */
@@ -97,6 +123,7 @@ export interface PublicInvitation {
   events: InvitationEvent[]
   /** RSVP settings. `enabled` controls RSVP form visibility on public page. */
   rsvp: { enabled: boolean }
+  customization: TemplateCustomization
   /** OG social sharing image URL. Never displayed in template. */
   ogImageUrl: string | null
   /** Photography footer. Always render. instagram/phone are optional. */
