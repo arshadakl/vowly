@@ -185,3 +185,78 @@
     font-family: var(--font-sans);
   }
 }
+
+/* Editor animations */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease both;
+}
+
+/* Scrollbar hiding */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Editor preview — CSS variables for font/size controls */
+.editor-preview-wrapper {
+  --editor-hero-font-family: inherit;
+  --editor-font-size: 14px;
+  --editor-font-scale: 1;
+}
+
+/* Apply chosen font to all text in the preview */
+.editor-preview-wrapper * {
+  font-family: var(--editor-hero-font-family) !important;
+  transition: font-family 0.3s ease;
+}
+
+/* SVGs and icons keep their own font */
+.editor-preview-wrapper svg,
+.editor-preview-wrapper img {
+  font-family: initial !important;
+}
+
+/* Apply font size via zoom on editable text */
+.editor-preview-wrapper .template-editable,
+.editor-preview-wrapper [contenteditable='true'] {
+  zoom: var(--editor-font-scale, 1);
+  transition: zoom 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Section visibility toggles */
+.editor-preview-wrapper[data-hide-events='true'] .template-celebrations {
+  display: none !important;
+}
+.editor-preview-wrapper[data-hide-rsvp='true'] .template-rsvp {
+  display: none !important;
+}
+.editor-preview-wrapper[data-hide-photo='true'] .template-couple-photo {
+  display: none !important;
+}

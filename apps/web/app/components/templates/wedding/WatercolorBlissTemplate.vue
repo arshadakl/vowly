@@ -248,14 +248,14 @@ provide('invitation', inv)
     <footer class="border-t border-[rgba(212,175,55,0.4)] bg-[#f4eadf] px-4 py-8 text-center text-[0.8rem] text-[#8c684d] sm:px-5 sm:py-10 sm:text-[0.88rem]">
       <p class="mb-2 font-[Great_Vibes] text-[2rem] text-[#5a3c26] sm:text-[2.2rem]">
         <TemplateEditable field="brideName" :value="brideName" as="span" class="font-[Great_Vibes]" />
-        {" & "}
+        <span class="text-[0.65em] text-[#d4af37]">&amp;</span>
         <TemplateEditable field="groomName" :value="groomName" as="span" class="font-[Great_Vibes]" />
       </p>
       <p class="leading-relaxed">
         <span class="font-[Lora]">
           <TemplateEditable field="rsvpText" :value="rsvpText" as="span" />
         </span>
-        {" · "}
+        <span class="mx-1">&middot;</span>
         <span class="font-[Lora]">
           <TemplateEditable field="footerDate" :value="footerDate || inv.weddingDate" as="span" />
         </span>
