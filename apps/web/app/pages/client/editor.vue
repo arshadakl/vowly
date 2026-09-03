@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   DEFAULT_TEMPLATE_CUSTOMIZATION,
-  TEMPLATE_FONT_IDS,
   type PublicInvitation,
   type TemplateTextStyle,
 } from '@vowly/types'
@@ -17,6 +16,8 @@ import {
   Upload,
 } from 'lucide-vue-next'
 import { invitationUpdateBody, previewInvitation } from '~/utils/template-preview'
+import EditorToolbar from '~/components/editor/EditorToolbar.vue'
+import { getEditorCSSVars } from '~/components/editor/font-utils'
 
 useSeoMeta({ title: 'Customize invitation', robots: 'noindex, nofollow' })
 
@@ -33,30 +34,6 @@ const errorMessage = ref<string | null>(null)
 const saveTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const hydrated = ref(false)
 const applyingServerState = ref(false)
-
-const presets = [
-  { name: 'Editorial', font: 'italiana', size: 15 },
-  { name: 'Royal', font: 'cinzel', size: 14 },
-  { name: 'Romantic', font: 'pinyon', size: 18 },
-  { name: 'Modern', font: 'jakarta', size: 13 },
-  { name: 'Traditional', font: 'amiri', size: 16 },
-] as const
-const fontLabels: Record<(typeof TEMPLATE_FONT_IDS)[number], string> = {
-  cinzel: 'Cinzel',
-  cormorant: 'Cormorant Garamond',
-  italiana: 'Italiana',
-  pinyon: 'Pinyon Script',
-  alex: 'Alex Brush',
-  jost: 'Jost',
-  jakarta: 'Plus Jakarta Sans',
-  amiri: 'Amiri',
-  malayalam: 'Noto Serif Malayalam',
-  greatVibes: 'Great Vibes',
-  lora: 'Lora',
-  montserrat: 'Montserrat',
-  playfair: 'Playfair Display',
-  allura: 'Allura',
-}
 
 /**
  * Editor state is a deeply reactive Vue Proxy. Browser structuredClone()
@@ -89,6 +66,15 @@ const preview = computed<PublicInvitation | null>(() => {
   if (!invitation.value || !template.value) return null
   return previewInvitation(template.value, invitation.value, invitation.value.customization)
 })
+
+const editorCSSVars = computed(() =>
+  invitation.value
+    ? getEditorCSSVars({
+        fontFamily: invitation.value.customization.fontFamily,
+        fontSize: invitation.value.customization.fontSize,
+      })
+    : {},
+)
 
 watch(
   invitation,
@@ -181,12 +167,6 @@ function updateInlineField(field: string, value: string) {
 
 function updateInlineStyle(field: string, style: TemplateTextStyle) {
   if (invitation.value) invitation.value.customization.styles[field] = style
-}
-
-function applyPreset(preset: (typeof presets)[number]) {
-  if (!invitation.value) return
-  invitation.value.customization.fontFamily = preset.font
-  invitation.value.customization.fontSize = preset.size
 }
 
 function addEvent() {
@@ -415,94 +395,10 @@ async function publish() {
 
     <main
       v-if="invitation && preview"
-      class="mx-auto grid max-w-[1500px] gap-5 p-3 lg:grid-cols-[minmax(360px,520px)_minmax(0,1fr)] lg:p-6"
+      class="mx-auto grid max-w-[1500px] gap-5 p-3 pb-28 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] lg:p-6 lg:pb-6"
     >
-      <section class="mx-auto w-full max-w-[430px] lg:sticky lg:top-24">
-        <div class="relative w-full">
-          <!-- Glow background -->
-          <div class="hidden md:block absolute -inset-6 rounded-[3rem] bg-gradient-to-br from-emerald-500/20 via-amber-500/15 to-transparent blur-3xl pointer-events-none" />
-
-          <div
-            class="editor-phone-frame relative bg-[#111] overflow-hidden mx-auto border-[5px] sm:border-[8px] border-[#0d0d0d] ring-1 ring-white/10"
-          >
-            <!-- Status bar -->
-            <div class="absolute top-0 left-0 right-0 h-[26px] sm:h-8 z-[65] flex items-center justify-between px-3.5 sm:px-6 text-white/80 text-[9px] sm:text-[11px] font-semibold bg-gradient-to-b from-black/30 to-transparent pointer-events-none" />
-
-            <!-- Dynamic Island -->
-            <div class="absolute top-[10px] sm:top-2 left-1/2 -translate-x-1/2 w-[100px] sm:w-28 h-[25px] sm:h-7 bg-black rounded-full z-[70] flex items-center justify-center">
-              <div class="w-1 h-1 sm:w-2 sm:h-2 rounded-full bg-[#1a1a1a] mr-1 sm:mr-2" />
-            </div>
-
-            <div
-              class="absolute inset-0 overflow-y-auto overscroll-contain pt-[34px] sm:pt-[42px] pb-5 sm:pb-8 [scrollbar-width:none]"
-            >
-              <div style="container-type: inline-size; width: 100%; max-width: 100%">
-                <TemplateRenderer
-                  :invitation="preview"
-                  editable
-                  @field="updateInlineField"
-                  @style="updateInlineStyle"
-                />
-              </div>
-            </div>
-
-            <!-- Home Indicator -->
-            <div class="absolute bottom-[10px] sm:bottom-2 left-1/2 -translate-x-1/2 w-[100px] sm:w-28 h-[6px] sm:h-1 rounded-full bg-white/40 z-[70]" />
-          </div>
-        </div>
-        <p class="mt-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-500">
-          <Eye class="h-4 w-4 text-emerald-700" />
-          Live preview · tap any text to edit · changes save automatically
-        </p>
-      </section>
-
-      <section class="space-y-5 pb-20">
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-semibold uppercase tracking-[.18em] text-indigo-600">Typography</p>
-          <h1 class="mt-1 text-xl font-semibold">Shape the design</h1>
-          <p class="mt-2 text-sm text-slate-500">
-            Tap text inside the invitation for individual size, bold and italic controls.
-          </p>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            <label class="text-sm font-medium"
-              >Global font<select
-                v-model="invitation.customization.fontFamily"
-                class="saas-input mt-1"
-              >
-                <option v-for="font in TEMPLATE_FONT_IDS" :key="font" :value="font">
-                  {{ fontLabels[font] }}
-                </option>
-              </select></label
-            >
-            <label class="text-sm font-medium"
-              >Text size: {{ invitation.customization.fontSize }}px<input
-                v-model.number="invitation.customization.fontSize"
-                type="range"
-                min="12"
-                max="26"
-                class="mt-3 w-full"
-            /></label>
-          </div>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <button
-              v-for="preset in presets"
-              :key="preset.name"
-              type="button"
-              class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold hover:border-indigo-400"
-              @click="applyPreset(preset)"
-            >
-              {{ preset.name }}
-            </button>
-          </div>
-          <div class="mt-4 flex gap-2">
-            <button type="button" class="saas-button-secondary" @click="resetSaved">
-              Reset to saved</button
-            ><button type="button" class="saas-button-secondary" @click="resetTypography">
-              Template defaults
-            </button>
-          </div>
-        </div>
-
+      <!-- Form controls — order-1 on mobile (top), order-2 on desktop (right) -->
+      <section class="order-1 lg:order-2 space-y-4 sm:space-y-5">
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p class="text-xs font-semibold uppercase tracking-[.18em] text-indigo-600">
             Couple and invitation
@@ -655,49 +551,68 @@ async function publish() {
             </article>
           </div>
         </div>
+      </section>
 
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-semibold uppercase tracking-[.18em] text-indigo-600">Sections</p>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            <label
-              class="flex items-center justify-between rounded-xl border border-slate-200 p-4 text-sm"
-              >Show events<input
-                v-model="invitation.customization.showEvents"
-                type="checkbox" /></label
-            ><label
-              class="flex items-center justify-between rounded-xl border border-slate-200 p-4 text-sm"
-              >Enable RSVP<input v-model="invitation.rsvpEnabled" type="checkbox" /></label
-            ><label
-              class="flex items-center justify-between rounded-xl border border-slate-200 p-4 text-sm"
-              >Enable supported music<input
-                v-model="invitation.customization.musicEnabled"
-                type="checkbox"
-            /></label>
+      <!-- Phone preview — order-2 on mobile (bottom), order-1 on desktop (left) -->
+      <section class="order-2 lg:order-1 w-full lg:sticky lg:top-24">
+        <div class="w-full flex justify-center lg:justify-end">
+          <div
+            class="relative w-full max-w-[400px] sm:max-w-[400px] lg:max-w-[440px] shrink-0 rounded-[54px] sm:rounded-[58px] border-[10px] sm:border-[12px] border-[#0f172a] shadow-2xl shadow-slate-900/40 overflow-hidden transition-all"
+            style="aspect-ratio: 393 / 852"
+          >
+            <!-- Dynamic Island -->
+            <div class="absolute top-[6px] sm:top-2 left-1/2 -translate-x-1/2 w-[90px] sm:w-[100px] h-[23px] sm:h-7 bg-black rounded-full z-[70]" />
+
+            <div
+              class="absolute inset-0 overflow-y-auto overscroll-contain no-scrollbar pt-[28px] sm:pt-[34px] pb-4 sm:pb-6"
+            >
+              <div
+                class="editor-preview-wrapper"
+                :style="{
+                  containerType: 'inline-size',
+                  width: '100%',
+                  maxWidth: '100%',
+                  ...editorCSSVars,
+                }"
+                :data-hide-events="invitation.customization.showEvents ? undefined : 'true'"
+                :data-hide-rsvp="invitation.rsvpEnabled ? undefined : 'true'"
+              >
+                <TemplateRenderer
+                  :invitation="preview"
+                  editable
+                  @field="updateInlineField"
+                  @style="updateInlineStyle"
+                />
+              </div>
+            </div>
+
+            <!-- Home Indicator -->
+            <div class="absolute bottom-[10px] sm:bottom-[5px] left-1/2 -translate-x-1/2 w-[100px] sm:w-[72px] h-[7px] sm:h-[2.5px] rounded-full bg-white/40 z-[70]" />
           </div>
         </div>
+        <p class="mt-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-500">
+          <Eye class="h-4 w-4 text-emerald-700" />
+          Live preview · tap any text to edit
+        </p>
       </section>
     </main>
+
     <div v-else-if="loading" class="grid min-h-[70vh] place-items-center text-sm text-slate-500">
       Opening the editor...
     </div>
     <div v-else class="grid min-h-[70vh] place-items-center p-6 text-center text-red-700">
       {{ errorMessage ?? 'Choose a template before editing.' }}
     </div>
+
+    <!-- Fixed bottom toolbar -->
+    <EditorToolbar
+      v-if="invitation"
+      v-model:font-family="invitation.customization.fontFamily"
+      v-model:font-size="invitation.customization.fontSize"
+      v-model:show-events="invitation.customization.showEvents"
+      v-model:rsvp-enabled="invitation.rsvpEnabled"
+    />
   </div>
 </template>
 
-<style scoped>
-.editor-phone-frame {
-  border-radius: 2.4rem;
-  max-width: 400px;
-  box-shadow: 0 60px 120px -20px rgba(0, 0, 0, 0.35);
-}
-@media (min-width: 640px) {
-  .editor-phone-frame {
-    border-radius: 3rem;
-    width: 400px;
-    max-width: none;
-    height: 860px;
-  }
-}
-</style>
+
