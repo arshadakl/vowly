@@ -93,6 +93,20 @@ function overrideFromMenu(client: Client, override: 'force_open' | 'force_locked
   openMenu.value = null
 }
 
+function statusLabel(client: Client): string {
+  if (client.status === 'ACTIVE') return client.invitation?.published ? 'Published' : 'Draft'
+  return client.status.replace('_', ' ')
+}
+
+function statusClasses(client: Client): string {
+  if (client.status === 'DELETED') return 'bg-red-50 text-red-700 ring-red-200'
+  if (client.status === 'ARCHIVED') return 'bg-slate-100 text-slate-600 ring-slate-200'
+  if (client.status === 'READ_ONLY') return 'bg-indigo-50 text-indigo-700 ring-indigo-200'
+  return client.invitation?.published
+    ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+    : 'bg-amber-50 text-amber-700 ring-amber-200'
+}
+
 function changePage(direction: -1 | 1) {
   page.value += direction
   void loadClients()
@@ -216,7 +230,7 @@ async function showRsvps(client: Client) {
 </script>
 
 <template>
-  <div v-if="session" class="min-h-screen bg-[#f4f6fa] px-4 py-5 text-[#172033] sm:px-6">
+  <div v-if="session" class="admin-dashboard min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6">
     <!-- Clickaway overlay for the 3-dot client menus -->
     <div
       v-if="openMenu"
@@ -224,18 +238,18 @@ async function showRsvps(client: Client) {
       @click="openMenu = null"
       @wheel="openMenu = null"
       @touchmove="openMenu = null"
-    ></div>
+    />
 
     <header
-      class="mx-auto flex max-w-[1500px] items-center justify-between rounded-xl border border-[#e8ebf1] bg-white px-6 py-4 shadow-[0_8px_30px_rgb(23_32_51/5%)] sm:px-8"
+      class="admin-header mx-auto flex max-w-7xl items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:px-8"
     >
       <div class="flex items-center gap-4">
-        <div class="flex h-12 w-12 items-center justify-center text-[#d4ad63]">
-          <Heart class="h-10 w-10" :stroke-width="1.5" />
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 text-white">
+          <Heart class="h-4 w-4" :stroke-width="2.5" />
         </div>
         <div>
-          <p class="text-lg font-semibold leading-none">Invitation Manager</p>
-          <p class="mt-1 text-sm text-[#6b7487]">Wedding Invitation Platform</p>
+          <p class="text-lg font-semibold leading-none tracking-tight">Vowly</p>
+          <p class="mt-1 text-sm text-slate-500">Admin workspace</p>
         </div>
       </div>
       <div class="relative">
@@ -244,8 +258,9 @@ async function showRsvps(client: Client) {
           @click="showUserMenu = !showUserMenu"
         >
           <span
-            class="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0eef8] text-[#34294d]"
-          >{{ session.username.charAt(0).toUpperCase() }}</span>
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-700"
+            >{{ session.username.charAt(0).toUpperCase() }}</span
+          >
           <span class="hidden sm:inline">{{ session.username }}</span>
           <ChevronDown class="h-4 w-4 text-[#596276]" />
         </button>
@@ -261,16 +276,36 @@ async function showRsvps(client: Client) {
             Log out
           </button>
         </div>
-        
+
         <!-- Invisible overlay for clickaway -->
         <div v-if="showUserMenu" class="fixed inset-0 z-40" @click="showUserMenu = false" />
       </div>
     </header>
 
-    <main
-      class="mx-auto mt-5 max-w-[1500px] rounded-xl border border-[#e8ebf1] bg-white shadow-[0_8px_30px_rgb(23_32_51/4%)]"
-    >
+    <main class="admin-main mx-auto mt-5 max-w-7xl rounded-xl border border-slate-200 bg-white shadow-sm">
       <section class="mt-0">
+        <div v-if="clients" class="grid gap-4 border-b border-slate-200 px-6 py-6 sm:grid-cols-2 sm:px-10 xl:grid-cols-4">
+          <article class="admin-stat-card">
+            <p>Total clients</p>
+            <strong>{{ clients.stats.total }}</strong>
+            <span>Across all workspaces</span>
+          </article>
+          <article class="admin-stat-card">
+            <p>Active clients</p>
+            <strong>{{ clients.stats.active }}</strong>
+            <span>Currently available</span>
+          </article>
+          <article class="admin-stat-card">
+            <p>Read only</p>
+            <strong>{{ clients.stats.readOnly }}</strong>
+            <span>Access restricted</span>
+          </article>
+          <article class="admin-stat-card">
+            <p>Archived</p>
+            <strong>{{ clients.stats.archived }}</strong>
+            <span>No longer active</span>
+          </article>
+        </div>
         <div
           class="flex flex-col gap-4 border-b border-[#e8ebf1] px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-10"
         >
@@ -279,7 +314,7 @@ async function showRsvps(client: Client) {
             <p class="mt-2 text-sm text-[#6b7487]">Manage all your clients and their invitations</p>
           </div>
           <button
-            class="inline-flex items-center gap-2 rounded-lg bg-[#111722] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#273044]"
+            class="saas-button"
             @click="startCreate"
           >
             <Plus class="h-5 w-5" /> Add Client
@@ -295,13 +330,13 @@ async function showRsvps(client: Client) {
               v-model="search"
               type="search"
               placeholder="Search by couple name, phone or slug..."
-              class="w-full rounded-lg border border-[#dfe4ed] bg-white py-3 pl-11 pr-4 text-sm text-[#4e586d] outline-none transition focus:border-[#b9a2d9]"
+              class="saas-input pl-11"
               @keyup.enter="refresh"
-            >
+            />
           </div>
           <select
             v-model="status"
-            class="rounded-lg border border-[#dfe4ed] bg-white px-4 py-3 text-sm text-[#4e586d] outline-none focus:border-[#b9a2d9] sm:w-[215px]"
+            class="saas-input sm:w-[215px]"
             @change="refresh"
           >
             <option value="ALL">All statuses</option>
@@ -311,7 +346,7 @@ async function showRsvps(client: Client) {
             <option value="DELETED">Deleted</option>
           </select>
           <button
-            class="rounded-lg border border-[#dfe4ed] px-5 py-3 text-xs font-semibold uppercase tracking-widest text-[#4e586d] transition hover:border-[#b9a2d9] sm:hidden"
+            class="saas-button-secondary sm:hidden"
             @click="refresh"
           >
             Search
@@ -321,10 +356,7 @@ async function showRsvps(client: Client) {
         <div v-if="loading" class="py-16 text-center text-sm text-ink-700/60">
           Loading clients...
         </div>
-        <div
-          v-else-if="clients?.items.length"
-          class="mx-4 sm:mx-10"
-        >
+        <div v-else-if="clients?.items.length" class="mx-4 sm:mx-10">
           <!-- Desktop Table -->
           <div class="hidden overflow-x-auto rounded-lg border border-[#e1e5ed] bg-white sm:block">
             <table class="w-full min-w-[820px] text-left text-sm">
@@ -354,7 +386,7 @@ async function showRsvps(client: Client) {
                   <td class="px-4 py-4">
                     <div class="flex items-center gap-3">
                       <span
-                        class="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8e6ef] text-sm font-semibold text-[#a54167]"
+                        class="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700"
                         >{{ client.name.charAt(0).toUpperCase() }}</span
                       >
                       <p class="font-semibold">{{ client.name }}</p>
@@ -366,27 +398,15 @@ async function showRsvps(client: Client) {
                   </td>
                   <td class="px-4 py-4">
                     <span
-                      :class="
-                        client.status === 'ACTIVE'
-                          ? 'bg-[#e4f5e9] text-[#2d7a4b]'
-                          : client.status === 'READ_ONLY'
-                            ? 'bg-[#eaf0ff] text-[#3461bd]'
-                            : 'bg-[#fff0ea] text-[#c4572c]'
-                      "
-                      class="rounded-lg px-3 py-2 text-xs font-semibold"
-                      >{{
-                        client.status === 'ACTIVE'
-                          ? client.invitation?.published
-                            ? 'Published'
-                            : 'Draft'
-                          : client.status.replace('_', ' ')
-                      }}</span
+                      :class="statusClasses(client)"
+                      class="rounded-full px-3 py-1 text-xs font-semibold capitalize ring-1 ring-inset"
+                      >{{ statusLabel(client) }}</span
                     >
                   </td>
                   <td class="px-4 py-4">
                     <span
-                      class="rounded-lg bg-[#f5f0e8] px-3 py-2 text-xs font-semibold text-[#8f6e3f]"
-                      >Floral</span
+                      class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-600 ring-1 ring-inset ring-slate-200"
+                      >{{ client.invitation?.template ?? 'Template selection required' }}</span
                     >
                   </td>
                   <td class="px-4 py-4 text-sm text-[#3e485b]">
@@ -406,25 +426,25 @@ async function showRsvps(client: Client) {
                     >
                     <div class="relative flex justify-end gap-2">
                       <button
-                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        class="saas-icon-button"
                         aria-label="Share"
                         @click="copyShareLink(client)"
                       >
                         <Share2 class="h-4 w-4" /></button
                       ><button
-                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        class="saas-icon-button"
                         aria-label="Preview"
                         @click="navigateTo(`/x/preview/${client.id}`)"
                       >
                         <Eye class="h-4 w-4" /></button
                       ><button
-                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        class="saas-icon-button"
                         aria-label="Edit"
                         @click="startEdit(client)"
                       >
                         <Pencil class="h-4 w-4" /></button
                       ><button
-                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e1e5ed] text-base text-[#4e586d] hover:border-[#b9a2d9]"
+                        class="saas-icon-button"
                         aria-label="More actions"
                         @click="toggleMenu(client.id, $event)"
                       >
@@ -488,82 +508,126 @@ async function showRsvps(client: Client) {
 
           <!-- Mobile Cards -->
           <div class="space-y-4 sm:hidden">
-            <div v-for="client in clients.items" :key="client.id + '-mobile'" class="rounded-xl border border-[#e1e5ed] bg-white p-4 shadow-sm">
+            <div
+              v-for="client in clients.items"
+              :key="client.id + '-mobile'"
+              class="rounded-xl border border-[#e1e5ed] bg-white p-4 shadow-sm"
+            >
               <div class="flex items-center justify-between border-b border-[#edf0f4] pb-3">
                 <div class="flex items-center gap-3">
-                  <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#f8e6ef] font-semibold text-[#a54167]">{{ client.name.charAt(0).toUpperCase() }}</span>
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 font-semibold text-indigo-700"
+                    >{{ client.name.charAt(0).toUpperCase() }}</span
+                  >
                   <div>
                     <p class="font-semibold text-base">{{ client.name }}</p>
-                    <p class="text-xs text-[#596276] mt-0.5"><CalendarDays class="mr-1 inline h-3 w-3" />{{ client.weddingDate }}</p>
+                    <p class="text-xs text-[#596276] mt-0.5">
+                      <CalendarDays class="mr-1 inline h-3 w-3" />{{ client.weddingDate }}
+                    </p>
                   </div>
                 </div>
                 <span
-                    :class="
-                      client.status === 'ACTIVE'
-                        ? 'bg-[#e4f5e9] text-[#2d7a4b]'
-                        : client.status === 'READ_ONLY'
-                          ? 'bg-[#eaf0ff] text-[#3461bd]'
-                          : 'bg-[#fff0ea] text-[#c4572c]'
-                    "
-                    class="rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
-                    >{{
-                      client.status === 'ACTIVE'
-                        ? client.invitation?.published
-                          ? 'Published'
-                          : 'Draft'
-                        : client.status.replace('_', ' ')
-                    }}</span>
+                  :class="statusClasses(client)"
+                  class="rounded-full px-2 py-1 text-[10px] font-semibold capitalize ring-1 ring-inset"
+                  >{{ statusLabel(client) }}</span
+                >
               </div>
-              
+
               <div class="py-3 flex justify-between text-sm">
-                 <div>
-                   <p class="text-[#596276] text-xs">Phone Number</p>
-                   <p class="font-medium mt-0.5">{{ client.phone }}</p>
-                 </div>
-                 <div class="text-right">
-                   <p class="text-[#596276] text-xs">Template</p>
-                   <p class="font-medium mt-0.5 text-[#8f6e3f]">Floral</p>
-                 </div>
+                <div>
+                  <p class="text-[#596276] text-xs">Phone Number</p>
+                  <p class="font-medium mt-0.5">{{ client.phone }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[#596276] text-xs">Template</p>
+                  <p class="mt-0.5 font-medium capitalize text-slate-700">
+                    {{ client.invitation?.template ?? 'Template selection required' }}
+                  </p>
+                </div>
               </div>
 
               <div class="flex justify-between items-center pt-3 border-t border-[#edf0f4]">
                 <button
-                   class="inline-flex items-center gap-2 text-sm text-[#4e586d] font-medium py-1 px-2 -ml-2 rounded-lg hover:bg-[#f8f9fb] transition"
-                   @click="copyShareLink(client)"
+                  class="inline-flex items-center gap-2 text-sm text-[#4e586d] font-medium py-1 px-2 -ml-2 rounded-lg hover:bg-[#f8f9fb] transition"
+                  @click="copyShareLink(client)"
                 >
                   <Share2 class="h-4 w-4" /> Share
                 </button>
                 <div class="flex gap-2 relative">
+                  <button
+                    class="saas-icon-button"
+                    @click="navigateTo(`/x/preview/${client.id}`)"
+                  >
+                    <Eye class="h-4 w-4" />
+                  </button>
+                  <button
+                    class="saas-icon-button"
+                    @click="startEdit(client)"
+                  >
+                    <Pencil class="h-4 w-4" />
+                  </button>
+                  <button
+                    class="saas-icon-button"
+                    @click="toggleMenu(client.id, $event)"
+                  >
+                    <MoreVertical class="h-4 w-4" />
+                  </button>
+                  <div
+                    v-if="openMenu === client.id"
+                    class="fixed z-50 w-44 rounded-lg border border-[#e1e5ed] bg-white py-1 text-left shadow-xl"
+                    :style="{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }"
+                  >
                     <button
-                      class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] text-[#4e586d] hover:border-[#b9a2d9]"
-                      @click="navigateTo(`/x/preview/${client.id}`)"
+                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                      @click="editFromMenu(client)"
                     >
-                      <Eye class="h-4 w-4" /></button>
-                    <button
-                      class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] text-[#4e586d] hover:border-[#b9a2d9]"
-                      @click="startEdit(client)"
-                    >
-                      <Pencil class="h-4 w-4" /></button>
-                    <button
-                      class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] text-[#4e586d] hover:border-[#b9a2d9]"
-                      @click="toggleMenu(client.id, $event)"
-                    >
-                      <MoreVertical class="h-4 w-4" />
+                      Edit
                     </button>
-                    <div
-                      v-if="openMenu === client.id"
-                      class="fixed z-50 w-44 rounded-lg border border-[#e1e5ed] bg-white py-1 text-left shadow-xl"
-                      :style="{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }"
+                    <button
+                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                      @click="showRsvpsFromMenu(client)"
                     >
-                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="editFromMenu(client)">Edit</button>
-                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="showRsvpsFromMenu(client)">RSVPs</button>
-                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="actionFromMenu(client, 'passcode')">New code</button>
-                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="overrideFromMenu(client, 'force_open')">Unlock edits</button>
-                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="overrideFromMenu(client, 'force_locked')">Lock edits</button>
-                      <button class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="overrideFromMenu(client, null)">Auto lock</button>
-                      <button v-if="client.status === 'ACTIVE'" class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]" @click="actionFromMenu(client, 'archive')">Archive</button>
-                      <button v-if="client.status !== 'DELETED'" class="block w-full px-4 py-2 text-left text-xs text-red-700 hover:bg-red-50" @click="actionFromMenu(client, 'delete')">Delete</button>
-                    </div>
+                      RSVPs
+                    </button>
+                    <button
+                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                      @click="actionFromMenu(client, 'passcode')"
+                    >
+                      New code
+                    </button>
+                    <button
+                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                      @click="overrideFromMenu(client, 'force_open')"
+                    >
+                      Unlock edits
+                    </button>
+                    <button
+                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                      @click="overrideFromMenu(client, 'force_locked')"
+                    >
+                      Lock edits
+                    </button>
+                    <button
+                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                      @click="overrideFromMenu(client, null)"
+                    >
+                      Auto lock
+                    </button>
+                    <button
+                      v-if="client.status === 'ACTIVE'"
+                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
+                      @click="actionFromMenu(client, 'archive')"
+                    >
+                      Archive
+                    </button>
+                    <button
+                      v-if="client.status !== 'DELETED'"
+                      class="block w-full px-4 py-2 text-left text-xs text-red-700 hover:bg-red-50"
+                      @click="actionFromMenu(client, 'delete')"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -573,7 +637,7 @@ async function showRsvps(client: Client) {
           v-else
           class="mt-5 border border-dashed border-ink-900/20 bg-white px-6 py-16 text-center"
         >
-          <p class="font-display text-3xl">No clients here yet.</p>
+          <p class="text-xl font-bold tracking-tight text-slate-950">No clients here yet.</p>
           <p class="mt-2 text-sm text-ink-700/60">
             Create a client to start a new invitation project.
           </p>
@@ -612,16 +676,16 @@ async function showRsvps(client: Client) {
 
     <div
       v-if="selectedRsvps"
-      class="fixed inset-0 z-10 flex items-center justify-center bg-ink-900/50 px-5"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6"
       @click.self="selectedRsvps = null"
     >
-      <section class="max-h-[80vh] w-full max-w-xl overflow-auto bg-[#f9f6ef] p-7 shadow-2xl">
+      <section class="max-h-[85vh] w-full max-w-xl overflow-auto rounded-xl border border-slate-200 bg-white p-6 shadow-xl sm:p-7">
         <div class="flex items-start justify-between">
           <div>
-            <p class="text-[10px] uppercase tracking-[0.24em] text-gold-600">Guest responses</p>
-            <h2 class="mt-2 font-display text-4xl">{{ selectedRsvps.client.name }}</h2>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">Guest responses</p>
+            <h2 class="mt-2 text-xl font-bold tracking-tight text-slate-950">{{ selectedRsvps.client.name }}</h2>
           </div>
-          <button aria-label="Close RSVP responses" class="text-xl" @click="selectedRsvps = null">
+          <button aria-label="Close RSVP responses" class="saas-icon-button" @click="selectedRsvps = null">
             ×
           </button>
         </div>
@@ -656,7 +720,7 @@ async function showRsvps(client: Client) {
             class="flex justify-between py-3 text-sm"
           >
             <span>{{ item.guestName }} ({{ item.guestCount }})</span
-            ><span class="capitalize text-gold-700">{{ item.status }}</span>
+            ><span class="font-medium capitalize text-indigo-700">{{ item.status }}</span>
           </li>
         </ul>
       </section>
@@ -664,23 +728,23 @@ async function showRsvps(client: Client) {
 
     <div
       v-if="showCreate"
-      class="fixed inset-0 z-10 flex items-center justify-center bg-ink-900/50 px-5"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6"
       @click.self="showCreate = false"
     >
       <form
-        class="w-full max-w-lg bg-[#f9f6ef] p-7 shadow-2xl sm:p-10"
+        class="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8"
         @submit.prevent="saveClient"
       >
         <div class="flex items-start justify-between">
           <div>
-            <p class="text-[10px] uppercase tracking-[0.24em] text-gold-600">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">
               {{ editing ? 'Update record' : 'New project' }}
             </p>
-            <h2 class="mt-2 font-display text-4xl">
+            <h2 class="mt-2 text-xl font-bold tracking-tight text-slate-950">
               {{ editing ? 'Edit client' : 'Add a client' }}
             </h2>
           </div>
-          <button type="button" class="text-xl" aria-label="Close" @click="showCreate = false">
+          <button type="button" class="saas-icon-button" aria-label="Close" @click="showCreate = false">
             ×
           </button>
         </div>
@@ -690,23 +754,23 @@ async function showRsvps(client: Client) {
               v-model="form.name"
               required
               maxlength="80"
-              class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500" ></label
+              class="saas-input mt-1" /></label
           ><label class="block text-sm"
             >Phone<input
               v-model="form.phone"
               required
               type="tel"
-              class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500" ></label
+              class="saas-input mt-1" /></label
           ><label class="block text-sm"
             >Wedding date<input
               v-model="form.weddingDate"
               required
               type="date"
-              class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3 outline-none focus:border-gold-500"
-          ></label>
+              class="saas-input mt-1"
+          /></label>
         </div>
         <button
-          class="mt-8 w-full bg-ink-900 py-3 text-xs uppercase tracking-[0.2em] text-white hover:bg-gold-600 disabled:opacity-50"
+          class="saas-button mt-8 w-full"
           :disabled="saving"
         >
           {{ saving ? 'Saving...' : editing ? 'Save changes' : 'Create client' }}
@@ -715,3 +779,115 @@ async function showRsvps(client: Client) {
     </div>
   </div>
 </template>
+
+<style>
+.admin-dashboard {
+  font-family: var(--font-sans);
+}
+
+.admin-dashboard .admin-header,
+.admin-dashboard .admin-main {
+  border-color: #e2e8f0;
+}
+
+.admin-dashboard .admin-header {
+  box-shadow: 0 1px 3px rgb(15 23 42 / 4%);
+}
+
+.admin-dashboard .admin-main {
+  overflow: hidden;
+}
+
+.admin-dashboard .admin-stat-card {
+  min-height: 8.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 1.25rem;
+}
+
+.admin-dashboard .admin-stat-card p {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-dashboard .admin-stat-card strong {
+  display: block;
+  margin-top: 0.75rem;
+  color: #0f172a;
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.admin-dashboard .admin-stat-card span {
+  display: block;
+  margin-top: 0.5rem;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.admin-dashboard .admin-main > section > div:nth-child(2),
+.admin-dashboard .admin-main > section > div:nth-child(3) {
+  border-color: #e2e8f0;
+}
+
+.admin-dashboard .admin-main table {
+  color: #334155;
+}
+
+.admin-dashboard .admin-main table thead {
+  background: #fff;
+  color: #64748b;
+}
+
+.admin-dashboard .admin-main table tr {
+  border-color: #f1f5f9;
+}
+
+.admin-dashboard .admin-main table tr:hover {
+  background: #f8fafc;
+}
+
+.admin-dashboard .admin-main [class*='border-[#e1e5ed]'] {
+  border-color: #e2e8f0;
+}
+
+.admin-dashboard .admin-main [class*='border-[#edf0f4]'] {
+  border-color: #f1f5f9;
+}
+
+.admin-dashboard .admin-main [class*='text-[#596276]'],
+.admin-dashboard .admin-main [class*='text-[#687287]'],
+.admin-dashboard .admin-main [class*='text-[#6b7487]'] {
+  color: #64748b;
+}
+
+.admin-dashboard .admin-main [class*='bg-[#f8f9fb]'] {
+  background: #fff;
+}
+
+.admin-dashboard .admin-main [class*='focus:border-[#b9a2d9]']:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgb(129 140 248 / 18%);
+}
+
+@media (max-width: 639px) {
+  .admin-dashboard {
+    padding-inline: 0.75rem;
+  }
+
+  .admin-dashboard .admin-header {
+    padding-inline: 1rem;
+  }
+
+  .admin-dashboard .admin-main {
+    margin-top: 1rem;
+    border-radius: 0.75rem;
+  }
+}
+</style>

@@ -47,8 +47,17 @@ const hash = await hashPassword(password)
 
 if (local) {
   const { DatabaseSync } = await import('node:sqlite')
-  const d1Dir = join(process.cwd(), 'apps', 'web', '.wrangler', 'state', 'v3', 'd1', 'miniflare-D1DatabaseObject')
-  const files = readdirSync(d1Dir).filter(f => f.endsWith('.sqlite') && !f.startsWith('metadata'))
+  const d1Dir = join(
+    process.cwd(),
+    'apps',
+    'web',
+    '.wrangler',
+    'state',
+    'v3',
+    'd1',
+    'miniflare-D1DatabaseObject',
+  )
+  const files = readdirSync(d1Dir).filter((f) => f.endsWith('.sqlite') && !f.startsWith('metadata'))
   if (files.length === 0) {
     console.error('No local D1 database found. Run db:migrate:local first.')
     process.exit(1)
@@ -87,6 +96,10 @@ if (local) {
     console.error('Seeding failed:', err instanceof Error ? err.message : err)
     process.exit(1)
   } finally {
-    try { unlinkSync(tmpFile) } catch {}
+    try {
+      unlinkSync(tmpFile)
+    } catch {
+      /* Temporary seed file may already be gone. */
+    }
   }
 }

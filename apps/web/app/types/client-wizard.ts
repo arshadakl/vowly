@@ -1,14 +1,14 @@
-import type { PublicInvitation } from '@vowly/types'
+import type { PublicInvitation, TemplateCustomization, TemplateId } from '@vowly/types'
 
-export type ClientWizardStep = 1 | 2 | 3 | 4
-
-export interface EditorInvitation extends Omit<PublicInvitation, 'slug'> {
+export interface EditorInvitation extends Omit<PublicInvitation, 'slug' | 'template'> {
   slug: string | null
+  template: TemplateId | null
   clientId: string
   editOverride: 'force_open' | 'force_locked' | null
   locked: boolean
   published: boolean
   rsvpEnabled: boolean
+  customizations: Partial<Record<TemplateId, TemplateCustomization>>
 }
 
 export interface RsvpData {

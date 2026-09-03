@@ -5,5 +5,5 @@ import 'vue-sonner/style.css'
 
 <template>
   <NuxtPage />
-  <Toaster position="top-center" richColors />
+  <Toaster position="top-center" rich-colors />
 </template>

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
+import { TEMPLATE_FONT_IDS, TEMPLATE_IDS } from '@vowly/types'
+import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core'
 
 export const admins = sqliteTable('admins', {
   id: text('id').primaryKey(),
@@ -42,9 +43,9 @@ export const invitations = sqliteTable(
     brideName: text('bride_name').notNull().default(''),
     groomName: text('groom_name').notNull().default(''),
     slug: text('slug').unique(),
-    template: text('template', { enum: ['floral'] })
-      .notNull()
-      .default('floral'),
+    template: text('template', { enum: TEMPLATE_IDS }),
+    brideParents: text('bride_parents'),
+    groomParents: text('groom_parents'),
     coverImage: text('cover_image'),
     brideImage: text('bride_image'),
     groomImage: text('groom_image'),
@@ -53,6 +54,12 @@ export const invitations = sqliteTable(
     editOverride: text('edit_override', { enum: ['force_open', 'force_locked'] }),
     rsvpEnabled: integer('rsvp_enabled', { mode: 'boolean' }).notNull().default(false),
     featuredVenueEventId: text('featured_venue_event_id'),
+    coupleImageAssetId: text('couple_image_asset_id'),
+    coupleImagePublicId: text('couple_image_public_id'),
+    coupleImageVersion: integer('couple_image_version'),
+    coupleImageFormat: text('couple_image_format'),
+    coupleImageWidth: integer('couple_image_width'),
+    coupleImageHeight: integer('couple_image_height'),
     published: integer('published', { mode: 'boolean' }).notNull().default(false),
     publishedAt: text('published_at'),
     ogImageUrl: text('og_image_url'),
@@ -64,6 +71,29 @@ export const invitations = sqliteTable(
       .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [index('idx_invitations_published').on(table.published)],
+)
+export const invitationTemplateCustomizations = sqliteTable(
+  'invitation_template_customizations',
+  {
+    invitationId: text('invitation_id')
+      .notNull()
+      .references(() => invitations.id, { onDelete: 'cascade' }),
+    templateId: text('template_id', { enum: TEMPLATE_IDS }).notNull(),
+    version: integer('version').notNull().default(1),
+    fontFamily: text('font_family', { enum: TEMPLATE_FONT_IDS }).notNull().default('cinzel'),
+    fontSize: integer('font_size').notNull().default(14),
+    showEvents: integer('show_events', { mode: 'boolean' }).notNull().default(true),
+    musicEnabled: integer('music_enabled', { mode: 'boolean' }).notNull().default(false),
+    textJson: text('text_json').notNull().default('{}'),
+    stylesJson: text('styles_json').notNull().default('{}'),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.invitationId, table.templateId] }),
+    index('idx_template_customizations_invitation').on(table.invitationId),
+  ],
 )
 export const events = sqliteTable(
   'events',

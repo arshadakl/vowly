@@ -13,7 +13,9 @@ export function useApi() {
     try {
       return await requestFetch<T>(request, {
         baseURL: '/api',
-        credentials: 'same-origin',
+        // Keep the session cookie on both client-side and SSR requests. This
+        // is especially important immediately after a login response sets it.
+        credentials: 'include',
         ...options,
       })
     } catch (error: unknown) {

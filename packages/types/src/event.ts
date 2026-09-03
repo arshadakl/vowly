@@ -3,13 +3,14 @@ import { calendarDateSchema, timeSchema } from './date'
 
 export const eventInputSchema = z
   .object({
+    id: z.string().uuid().optional(),
     title: z.string().trim().min(1).max(80),
     eventDate: calendarDateSchema,
     startTime: timeSchema.nullable().optional(),
     endTime: timeSchema.nullable().optional(),
     venue: z.string().trim().max(120).nullable().optional(),
     googleMapUrl: z.string().url().max(500).nullable().optional(),
-    googleMapEmbedUrl: z.string().max(1000).nullable().optional(),
+    googleMapEmbedUrl: z.string().url().max(1000).nullable().optional(),
     address: z.string().trim().max(500).nullable().optional(),
     notes: z.string().trim().max(1000).nullable().optional(),
     sortOrder: z.number().int().min(0).default(0),
@@ -40,7 +41,6 @@ export type EventInput = z.infer<typeof eventInputSchema>
  * Time format: `HH:MM` (24-hour). Display with ` · ` and ` – ` separators.
  * Google Maps: Use `@vowly/utils` functions, never raw URL handling.
  *
- * @see docs/template-standards.md for full rendering rules
  */
 export interface InvitationEvent extends EventInput {
   /** Internal UUID. Never display to guests. */

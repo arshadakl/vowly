@@ -82,13 +82,13 @@ useSeoMeta({
 </script>
 
 <template>
-  <main>
-    <template v-if="invitation">
+  <main class="min-h-screen bg-slate-900">
+    <div v-if="invitation" class="mx-auto w-full max-w-[430px] bg-ivory-50 shadow-2xl">
       <TemplateRenderer :invitation="invitation" />
       <section
         v-if="invitation?.rsvp.enabled"
         aria-labelledby="rsvp-title"
-        class="mx-auto max-w-xl px-6 py-16"
+        class="border-t border-stone-200 bg-ivory-50 px-6 py-16"
       >
         <p class="text-center text-[10px] uppercase tracking-[0.24em] text-gold-600">
           Kindly reply
@@ -116,7 +116,7 @@ useSeoMeta({
               maxlength="80"
               autocomplete="name"
               class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3"
-          ></label>
+          /></label>
           <fieldset>
             <legend class="text-sm">Response</legend>
             <div class="mt-2 grid grid-cols-3 gap-2">
@@ -127,8 +127,13 @@ useSeoMeta({
                   { value: 'no', label: 'Sadly no' },
                 ]"
                 :key="option.value"
-                class="border border-ink-900/15 bg-white p-3 text-center text-xs"
-                ><input v-model="rsvpStatus" :value="option.value" type="radio" class="sr-only" >{{
+                class="border bg-white p-3 text-center text-xs transition"
+                :class="
+                  rsvpStatus === option.value
+                    ? 'border-ink-900 ring-1 ring-ink-900'
+                    : 'border-ink-900/15'
+                "
+                ><input v-model="rsvpStatus" :value="option.value" type="radio" class="sr-only" />{{
                   option.label
                 }}</label
               >
@@ -141,10 +146,10 @@ useSeoMeta({
               min="1"
               max="20"
               class="mt-1 w-full border border-ink-900/15 bg-white px-4 py-3"
-          ></label>
+          /></label>
           <label class="sr-only"
             >Website<input v-model="rsvpWebsite" tabindex="-1" autocomplete="off"
-          ></label>
+          /></label>
           <button
             type="submit"
             class="w-full bg-ink-900 py-4 text-xs uppercase tracking-[0.2em] text-white disabled:opacity-50"
@@ -154,7 +159,7 @@ useSeoMeta({
           </button>
         </form>
       </section>
-    </template>
+    </div>
     <div
       v-else-if="_error"
       class="flex min-h-screen flex-col items-center justify-center px-6 text-center"
