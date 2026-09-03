@@ -52,9 +52,7 @@ Never use those credentials outside local development.
 
 ## Adding a new invitation template
 
-1. **Read `docs/template-standards.md` first** — it defines every field, its type,
-   whether it is required or optional, and how templates must render it.
-2. Open `packages/types/src/template.ts` and add the template to `TEMPLATE_IDS` with its metadata and OG theme.
+1. Open `packages/types/src/template.ts` and add the template to `TEMPLATE_IDS` with its metadata, background asset, and OG theme.
 3. Create the component at `apps/web/app/components/templates/<id>/<Id>Template.vue`.
    - It must accept `defineProps<{ invitation: PublicInvitation }>`.
    - Follow all conditional rendering rules from the standards doc.

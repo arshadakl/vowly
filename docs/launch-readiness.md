@@ -1,5 +1,9 @@
 # Launch Readiness
 
+Cloudinary invitation-photo configuration, quotas, staging verification, deletion, backup, and rollback are
+documented in [cloudinary-setup.md](./cloudinary-setup.md). Production release requires a successful staged
+signed upload/confirm/delivery/delete cycle; automated tests must use mocks.
+
 This is the M5 runbook for Vowly. It deliberately contains no resource IDs,
 tokens, passwords, or commands that create production resources automatically.
 
@@ -9,11 +13,11 @@ Vowly is deployed as a single Cloudflare Pages/Worker project. Nuxt server
 routes handle all `/api/*` traffic inside the same deployment; no separate API
 Worker or custom `/api/*` route is required.
 
-| Environment | Web                                 | Data        |
-| ----------- | ----------------------------------- | ----------- |
-| local       | `http://localhost:3000`             | local D1    |
-| staging     | Pages preview / branch deployment   | staging D1  |
-| production  | Pages custom domain                 | production D1 |
+| Environment | Web                               | Data          |
+| ----------- | --------------------------------- | ------------- |
+| local       | `http://localhost:3000`           | local D1      |
+| staging     | Pages preview / branch deployment | staging D1    |
+| production  | Pages custom domain               | production D1 |
 
 Local development uses same-origin `/api` requests. `NUXT_PUBLIC_API_BASE`
 should not be set in local `.dev.vars` unless you are intentionally testing a
@@ -53,12 +57,12 @@ command and stored as PBKDF2 hashes in D1.
 
 Configure the Pages project with these values:
 
-| Setting | Value |
-|---------|-------|
-| Root directory | `/` |
-| Build command | `pnpm --filter @vowly/web build` |
-| Build output directory | `apps/web/dist` |
-| Deploy command | `pnpm exec wrangler pages deploy apps/web/dist --project-name <PAGES_PROJECT_NAME>` |
+| Setting                | Value                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| Root directory         | `/`                                                                                 |
+| Build command          | `pnpm --filter @vowly/web build`                                                    |
+| Build output directory | `apps/web/dist`                                                                     |
+| Deploy command         | `pnpm exec wrangler pages deploy apps/web/dist --project-name <PAGES_PROJECT_NAME>` |
 
 This project uses a Cloudflare build configuration that requires a deploy command.
 Use the Pages deploy command above. Replace `<PAGES_PROJECT_NAME>` with the exact
