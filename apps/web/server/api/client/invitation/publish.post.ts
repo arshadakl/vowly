@@ -2,12 +2,21 @@ import { buildBaseSlug, resolveSlug } from '@vowly/utils'
 import { editorContext } from '../../../utils/editor'
 import { apiError } from '../../../utils/http'
 import { getEnv } from '../../../utils/env'
+import { templateIdSchema } from '@vowly/types'
 export default defineEventHandler(async (event) => {
   const context = await editorContext(event)
   if (context.locked || context.client.status === 'READ_ONLY')
     apiError('EDIT_LOCKED', 'This invitation is locked after the wedding day.', 403)
   if (!context.invitation.bride_name.trim() || !context.invitation.groom_name.trim())
     apiError('INVITATION_INCOMPLETE', 'Add both names before publishing the invitation.', 400)
+  if (!templateIdSchema.safeParse(context.invitation.template).success)
+    apiError('INVITATION_INCOMPLETE', 'Choose an invitation template before publishing.', 400)
+  const eventCount = await getEnv(event)
+    .DB.prepare('SELECT COUNT(*) AS count FROM events WHERE invitation_id = ?')
+    .bind(context.invitation.id)
+    .first<{ count: number }>()
+  if (!eventCount?.count)
+    apiError('INVITATION_INCOMPLETE', 'Add at least one wedding event before publishing.', 400)
   if (context.invitation.published && context.invitation.slug)
     return {
       slug: context.invitation.slug,
