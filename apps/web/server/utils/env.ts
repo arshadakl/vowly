@@ -5,6 +5,10 @@ export interface RuntimeEnv {
   DB: D1Database
   APP_NAME?: string
   ENVIRONMENT?: string
+  CLOUDINARY_CLOUD_NAME?: string
+  CLOUDINARY_API_KEY?: string
+  CLOUDINARY_API_SECRET?: string
+  CLOUDINARY_UPLOAD_PRESET?: string
 }
 
 export function getEnv(event: H3Event): RuntimeEnv {
