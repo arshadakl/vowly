@@ -32,9 +32,15 @@ const cleanPhone = computed(() => (props.whatsappNumber || '').replace(/[^\d]/g,
 
 const guestCountOptions = ['1', '2', '3', '4', '5+']
 
+const hasWhatsapp = computed(() => cleanPhone.value.length >= 8)
+
 function handleSendRsvp() {
   if (!guestName.value.trim()) {
     error.value = 'Please enter your name'
+    return
+  }
+  if (!hasWhatsapp.value) {
+    error.value = 'WhatsApp number is not configured.'
     return
   }
   error.value = ''
@@ -51,10 +57,9 @@ function handleSendRsvp() {
     `✨ *Status*: ${statusText}\n` +
     (guestsText ? `${guestsText}\n` : '') +
     wishText + '\n\n' +
-    `Sent via Vowly`
+    `Sent via Lace & Looms`
 
-  const targetPhone = cleanPhone.value || '919876543210'
-  const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(textMsg)}`
+  const whatsappUrl = `https://wa.me/${cleanPhone.value}?text=${encodeURIComponent(textMsg)}`
 
   submitted.value = true
   setTimeout(() => {
@@ -344,11 +349,11 @@ const themeClasses = computed(() => {
           <button
             type="submit"
             class="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 px-5 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all active:scale-[0.98] group"
-            :class="themeClasses.button"
+            :class="hasWhatsapp ? themeClasses.button : 'bg-stone-300 text-stone-500 cursor-not-allowed'"
           >
             <MessageCircle class="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current" />
-            <span>Send RSVP via WhatsApp</span>
-            <Send class="w-3.5 h-3.5 opacity-80 transition-transform group-hover:translate-x-0.5" />
+            <span>{{ hasWhatsapp ? 'Send RSVP via WhatsApp' : 'WhatsApp not configured' }}</span>
+            <Send v-if="hasWhatsapp" class="w-3.5 h-3.5 opacity-80 transition-transform group-hover:translate-x-0.5" />
           </button>
           <p v-if="cleanPhone" class="text-[10px] text-center mt-2 font-medium tracking-wide" :class="themeClasses.footnote">
             Pre-fills message to <span class="font-semibold opacity-90">+{{ cleanPhone }}</span>

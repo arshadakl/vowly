@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl, fontIdToCss } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent } from '@vowly/utils'
 import { MapPin, Sparkles } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -14,6 +14,7 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('royal-postcard')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'Hamza')
 const brideName = computed(() => inv.value.brideName || 'Ayesha')
@@ -27,8 +28,8 @@ const weddingMonth = computed(() => inv.value.customization.text.weddingMonth ||
 const weddingDayNum = computed(() => inv.value.customization.text.weddingDayNum || '21')
 const weddingYear = computed(() => inv.value.customization.text.weddingYear || '2026')
 const weddingTime = computed(() => inv.value.customization.text.weddingTime || 'AT 05:30 PM')
-const venueName = computed(() => inv.value.events?.[0]?.venue || 'The Raviz Kadavu')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || 'BYPASS ROAD, CALICUT (KOZHIKODE),\nMALABAR, KERALA')
+const venueName = computed(() => featuredEvent.value?.venue || 'The Raviz Kadavu')
+const venueAddress = computed(() => featuredEvent.value?.address || 'BYPASS ROAD, CALICUT (KOZHIKODE),\nMALABAR, KERALA')
 const venueMapTitle = computed(() => inv.value.customization.text.venueMapTitle || 'THE RAVIZ KADAVU RESORT')
 const venueMapAddress = computed(() => inv.value.customization.text.venueMapAddress || 'NH 66, Bypass Road, Calicut (Kozhikode), Kerala 673633')
 const findUsButtonText = computed(() => inv.value.customization.text.findUsButtonText || 'Open in Google Maps')
@@ -47,7 +48,7 @@ const showPhotoSection = computed(() => inv.value.showImages !== false)
 const couplePhoto = computed(() => inv.value.coupleImageUrl || inv.value.brideImage || '')
 
 const googleMapUrl = computed(() => {
-  const url = inv.value.events?.[0]?.googleMapUrl
+  const url = featuredEvent.value?.googleMapUrl
   if (url) return googleMapsOpenUrl(url)
   return googleMapsOpenUrl(`${venueName.value} ${venueMapAddress.value}`)
 })

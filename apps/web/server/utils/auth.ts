@@ -3,8 +3,23 @@ import type { H3Event } from 'h3'
 import { getEnv } from './env'
 import { ADMIN_SESSION_TTL, CLIENT_SESSION_TTL } from './constants'
 
-export const SESSION_COOKIE = 'vowly_session'
+export const ADMIN_SESSION_COOKIE = 'vowly_admin_session'
+export const CLIENT_SESSION_COOKIE = 'vowly_client_session'
 const webCrypto = globalThis.crypto
+
+function sessionCookie(type: 'admin' | 'client') {
+  return type === 'admin' ? ADMIN_SESSION_COOKIE : CLIENT_SESSION_COOKIE
+}
+
+function sessionCookieOptions(event: H3Event, maxAge: number) {
+  return {
+    httpOnly: true,
+    secure: getRequestURL(event).protocol === 'https:',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge,
+  }
+}
 
 export async function hashToken(token: string) {
   const digest = await webCrypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
@@ -12,7 +27,7 @@ export async function hashToken(token: string) {
 }
 
 export async function sessionSubject(event: H3Event, type: 'admin' | 'client') {
-  const token = getCookie(event, SESSION_COOKIE)
+  const token = getCookie(event, sessionCookie(type))
   if (!token) return null
   const env = getEnv(event)
   const tokenHash = await hashToken(token)
@@ -23,19 +38,13 @@ export async function sessionSubject(event: H3Event, type: 'admin' | 'client') {
     .first<{ subject_id: string }>()
   if (!session) return null
   const ttl = type === 'client' ? CLIENT_SESSION_TTL : ADMIN_SESSION_TTL
-  const expiresAt = new Date(Date.now() + ttl * 1000).toISOString()
+  // Refresh at most once every six hours. This avoids a D1 write for every authenticated request.
   await env.DB.prepare(
-    "UPDATE sessions SET last_seen_at = datetime('now'), expires_at = ? WHERE token_hash = ?",
+    "UPDATE sessions SET last_seen_at = datetime('now'), expires_at = ? WHERE token_hash = ? AND (last_seen_at IS NULL OR datetime(last_seen_at) < datetime('now', '-6 hours'))",
   )
-    .bind(expiresAt, tokenHash)
+    .bind(new Date(Date.now() + ttl * 1000).toISOString(), tokenHash)
     .run()
-  setCookie(event, SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: getRequestURL(event).protocol === 'https:',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: ttl,
-  })
+  setCookie(event, sessionCookie(type), token, sessionCookieOptions(event, ttl))
   if (type === 'admin')
     return env.DB.prepare('SELECT id, username FROM admins WHERE id = ?')
       .bind(session.subject_id)
@@ -68,13 +77,7 @@ export async function createSession(
       getRequestHeader(event, 'User-Agent') ?? null,
     )
     .run()
-  setCookie(event, SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: getRequestURL(event).protocol === 'https:',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: ttl,
-  })
+  setCookie(event, sessionCookie(type), token, sessionCookieOptions(event, ttl))
 }
 
 export async function revokeClientSessions(event: H3Event, clientId: string) {
@@ -84,12 +87,12 @@ export async function revokeClientSessions(event: H3Event, clientId: string) {
     .run()
 }
 
-export async function destroySession(event: H3Event) {
-  const token = getCookie(event, SESSION_COOKIE)
+export async function destroySession(event: H3Event, type: 'admin' | 'client') {
+  const token = getCookie(event, sessionCookie(type))
   if (token)
     await getEnv(event)
       .DB.prepare('DELETE FROM sessions WHERE token_hash = ?')
       .bind(await hashToken(token))
       .run()
-  deleteCookie(event, SESSION_COOKIE, { path: '/' })
+  deleteCookie(event, sessionCookie(type), { path: '/' })
 }

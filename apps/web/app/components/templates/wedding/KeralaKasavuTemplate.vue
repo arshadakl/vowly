@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl, fontIdToCss } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent, formatDate } from '@vowly/utils'
 import { Calendar, Clock, MapPin, Sparkles, Heart, Users, ChevronDown, Navigation } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -14,6 +14,7 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('kerala-kasavu')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'Vijay')
 const brideName = computed(() => inv.value.brideName || 'Sreelakshmi')
@@ -21,9 +22,9 @@ const groomParents = computed(() => inv.value.groomParents || 'Son of Smt. Laksh
 const brideParents = computed(() => inv.value.brideParents || 'Daughter of Smt. Radhika & Sri. K. Narayanan')
 const weddingDate = computed(() => inv.value.weddingDate || '2026-09-12')
 const weddingTz = computed(() => inv.value.weddingTz || 'Asia/Kolkata')
-const venueName = computed(() => inv.value.events?.[0]?.venue || 'The Leela Raviz Kovalam')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || 'Beach Road, Kovalam, Thiruvananthapuram, Kerala 695527')
-const googleMapUrl = computed(() => inv.value.events?.[0]?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
+const venueName = computed(() => featuredEvent.value?.venue || 'The Leela Raviz Kovalam')
+const venueAddress = computed(() => featuredEvent.value?.address || 'Beach Road, Kovalam, Thiruvananthapuram, Kerala 695527')
+const googleMapUrl = computed(() => featuredEvent.value?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
 const whatsappNumber = computed(() => inv.value.customization.text.whatsappNumber || '')
 const showEvents = computed(() => inv.value.customization.showEvents !== false)
 const showPhotoSection = computed(() => inv.value.showImages !== false)
@@ -41,7 +42,7 @@ const saveTheDateNote = computed(() => inv.value.customization.text.saveTheDateN
 const footerSub = computed(() => inv.value.customization.text.footerSub || 'WE LOOK FORWARD TO CELEBRATING THIS BEAUTIFUL DAY WITH YOU')
 const footerMark = computed(() => inv.value.customization.text.footerMark || 'സ്നേഹപൂർവ്വം')
 const dressCode = computed(() => inv.value.customization.text.dressCode || 'Traditional Kerala Kasavu or Formal Ethnic')
-const muhurthamTime = computed(() => inv.value.events?.[0]?.startTime || '8:00 AM')
+const muhurthamTime = computed(() => featuredEvent.value?.startTime || '8:00 AM')
 const muhurthamNote = computed(() => inv.value.customization.text.muhurthamNote || 'The sacred ceremony begins at the auspicious hour')
 const receptionTime = computed(() => inv.value.customization.text.receptionTime || '7:00 PM onwards')
 const receptionNote = computed(() => inv.value.customization.text.receptionNote || 'An evening of celebration, dinner & togetherness')
@@ -51,21 +52,6 @@ const monogram = computed(() => {
   const b = brideName.value?.trim()?.charAt(0)?.toUpperCase() || 'S'
   return `${b} & ${g}`
 })
-
-const formatDate = (dateStr: string) => {
-  try {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    return new Intl.DateTimeFormat('en-GB', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(Date.UTC(year ?? 2000, (month ?? 1) - 1, day ?? 1)))
-  } catch {
-    return dateStr
-  }
-}
 
 const details = computed(() => [
   { icon: Calendar, label: 'The Date', value: formatDate(weddingDate.value) },

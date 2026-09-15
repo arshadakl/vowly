@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl, fontIdToCss } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent } from '@vowly/utils'
 import { MapPin, CalendarDays, Sparkles } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -14,6 +14,7 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('watercolor-bliss')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'Sumit Gupta')
 const brideName = computed(() => inv.value.brideName || 'Prerna Singh')
@@ -27,7 +28,7 @@ const weddingMonthYear = computed(() => inv.value.customization.text.weddingMont
 const weddingDayNumber = computed(() => inv.value.customization.text.weddingDayNumber || '25')
 const weddingDay = computed(() => inv.value.customization.text.weddingDay || 'SUNDAY')
 const weddingTimeDisplay = computed(() => inv.value.customization.text.weddingTime || '8:00 AM')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || '123 Anywhere St, Any City, ST 12345')
+const venueAddress = computed(() => featuredEvent.value?.address || '123 Anywhere St, Any City, ST 12345')
 const countdownTitle = computed(() => inv.value.customization.text.countdownTitle || 'Counting Down')
 const countdownSubtitle = computed(() => inv.value.customization.text.countdownSubtitle || 'Build excitement for the big day')
 const daysLabel = computed(() => inv.value.customization.text.daysLabel || 'Days')
@@ -49,7 +50,7 @@ const showPhotoSection = computed(() => inv.value.showImages !== false)
 const couplePhoto = computed(() => inv.value.coupleImageUrl || inv.value.brideImage || '')
 
 const googleMapUrl = computed(() => {
-  const url = inv.value.events?.[0]?.googleMapUrl
+  const url = featuredEvent.value?.googleMapUrl
   if (url) return url
   return googleMapsOpenUrl(venueAddress.value)
 })

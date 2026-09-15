@@ -6,9 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Heart,
   MoreVertical,
-  Share2,
   Pencil,
   Plus,
   Search,
@@ -61,6 +59,12 @@ const openMenu = ref<string | null>(null)
 const showUserMenu = ref(false)
 const menuPosition = reactive({ top: 0, left: 0 })
 
+async function copyLoginLink(loginToken: string) {
+  const url = `${window.location.origin}/login#key=${encodeURIComponent(loginToken)}`
+  await navigator.clipboard?.writeText(url)
+}
+
+
 function toggleMenu(clientId: string, event: MouseEvent) {
   openMenu.value = openMenu.value === clientId ? null : clientId
   if (openMenu.value) {
@@ -76,12 +80,6 @@ function editFromMenu(client: Client) {
   openMenu.value = null
 }
 
-function showRsvpsFromMenu(client: Client) {
-  void showRsvps(client)
-  openMenu.value = null
-}
-
-// Share link is now triggered directly using copyShareLink
 
 function actionFromMenu(client: Client, action: 'archive' | 'delete' | 'passcode') {
   void runAction(client, action)
@@ -148,26 +146,17 @@ async function runAction(client: Client, action: 'archive' | 'delete' | 'passcod
           : `/admin/clients/${client.id}/passcode`
     const options =
       action === 'delete' ? { method: 'DELETE' as const } : { method: 'POST' as const }
-    const updated = await api<Client>(endpoint, options)
     if (action === 'passcode') {
-      await navigator.clipboard?.writeText(updated.passcode)
-      toast.success(`New passcode ${updated.passcode} copied to clipboard.`)
+      const updated = await api<Client & { passcode: string; loginToken: string }>(endpoint, options)
+      await copyLoginLink(updated.loginToken)
+      toast.success('New login link copied to clipboard. It remains valid until the next code reset.')
     } else {
+      const updated = await api<Client>(endpoint, options)
       toast.success(`${client.name} is now ${updated.status.toLowerCase()}.`)
     }
     await loadClients()
   } catch (error: unknown) {
     toast.error(error instanceof Error ? error.message : 'Action failed')
-  }
-}
-
-async function copyShareLink(client: Client) {
-  const url = `${window.location.origin}/login?key=${client.passcode}`
-  try {
-    await navigator.clipboard?.writeText(url)
-    toast.success('Share link copied to clipboard')
-  } catch {
-    toast.error('Could not copy the link.')
   }
 }
 
@@ -190,10 +179,9 @@ async function saveClient() {
       await api<Client>(`/admin/clients/${editing.value.id}`, { method: 'PATCH', body: form })
       toast.success('Client details updated.')
     } else {
-      const created = await api<Client>('/admin/clients', { method: 'POST', body: form })
-      const url = `${window.location.origin}/login?key=${created.passcode}`
-      toast.success(`${created.clientCode} created. Share link copied.`)
-      await navigator.clipboard?.writeText(url)
+      const created = await api<Client & { passcode: string; loginToken: string }>('/admin/clients', { method: 'POST', body: form })
+      await copyLoginLink(created.loginToken)
+      toast.success(`${created.clientCode} created. Its login link was copied to clipboard.`)
     }
     showCreate.value = false
     await loadClients()
@@ -219,14 +207,6 @@ async function setOverride(client: Client, override: 'force_open' | 'force_locke
     toast.error(error instanceof Error ? error.message : 'Could not update edit lock.')
   }
 }
-async function showRsvps(client: Client) {
-  try {
-    const data = await api<AdminRsvpData>(`/admin/clients/${client.id}/invitation/rsvps`)
-    selectedRsvps.value = { client, data }
-  } catch (error: unknown) {
-    toast.error(error instanceof Error ? error.message : 'Could not load RSVPs.')
-  }
-}
 </script>
 
 <template>
@@ -244,11 +224,8 @@ async function showRsvps(client: Client) {
       class="admin-header mx-auto flex max-w-7xl items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:px-8"
     >
       <div class="flex items-center gap-4">
-        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 text-white">
-          <Heart class="h-4 w-4" :stroke-width="2.5" />
-        </div>
+        <img src="/logo/logo-000000.png" alt="Lace & Looms" class="h-8 w-auto max-w-40 object-contain" />
         <div>
-          <p class="text-lg font-semibold leading-none tracking-tight">Vowly</p>
           <p class="mt-1 text-sm text-slate-500">Admin workspace</p>
         </div>
       </div>
@@ -427,12 +404,6 @@ async function showRsvps(client: Client) {
                     <div class="relative flex justify-end gap-2">
                       <button
                         class="saas-icon-button"
-                        aria-label="Share"
-                        @click="copyShareLink(client)"
-                      >
-                        <Share2 class="h-4 w-4" /></button
-                      ><button
-                        class="saas-icon-button"
                         aria-label="Preview"
                         @click="navigateTo(`/x/preview/${client.id}`)"
                       >
@@ -460,11 +431,6 @@ async function showRsvps(client: Client) {
                           @click="editFromMenu(client)"
                         >
                           Edit</button
-                        ><button
-                          class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                          @click="showRsvpsFromMenu(client)"
-                        >
-                          RSVPs</button
                         ><button
                           class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
                           @click="actionFromMenu(client, 'passcode')"
@@ -547,12 +513,7 @@ async function showRsvps(client: Client) {
               </div>
 
               <div class="flex justify-between items-center pt-3 border-t border-[#edf0f4]">
-                <button
-                  class="inline-flex items-center gap-2 text-sm text-[#4e586d] font-medium py-1 px-2 -ml-2 rounded-lg hover:bg-[#f8f9fb] transition"
-                  @click="copyShareLink(client)"
-                >
-                  <Share2 class="h-4 w-4" /> Share
-                </button>
+                <div></div>
                 <div class="flex gap-2 relative">
                   <button
                     class="saas-icon-button"
@@ -582,12 +543,6 @@ async function showRsvps(client: Client) {
                       @click="editFromMenu(client)"
                     >
                       Edit
-                    </button>
-                    <button
-                      class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
-                      @click="showRsvpsFromMenu(client)"
-                    >
-                      RSVPs
                     </button>
                     <button
                       class="block w-full px-4 py-2 text-left text-xs hover:bg-[#f8f9fb]"
@@ -657,12 +612,14 @@ async function showRsvps(client: Client) {
               class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] disabled:opacity-30"
               @click="changePage(-1)"
             >
-              ><ChevronLeft class="h-4 w-4" /></button
-            ><button
+              <ChevronLeft class="h-4 w-4" />
+            </button>
+            <button
               class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111722] text-white"
             >
-              {{ page }}</button
-            ><button
+              {{ page }}
+            </button>
+            <button
               :disabled="page === pageCount"
               class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e1e5ed] disabled:opacity-30"
               @click="changePage(1)"

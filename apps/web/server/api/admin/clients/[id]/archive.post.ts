@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
     clientCode: row.client_code,
     name: row.name,
     phone: row.phone,
-    passcode: row.passcode,
     status: row.status,
     weddingDate: row.wedding_date,
     weddingTz: row.wedding_tz,

@@ -8,7 +8,6 @@ function presentDeleted(row: Record<string, unknown>) {
     clientCode: row.client_code,
     name: row.name,
     phone: row.phone,
-    passcode: row.passcode,
     status: 'DELETED',
     weddingDate: row.wedding_date,
     weddingTz: row.wedding_tz,

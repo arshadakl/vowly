@@ -15,5 +15,6 @@ export default defineEventHandler(async (event) => {
     parsed.data.template,
     parsed.data.customization,
   )
-  return presentEditor(event, context)
+  const freshContext = await editorContext(event)
+  return presentEditor(event, freshContext)
 })

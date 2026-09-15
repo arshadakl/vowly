@@ -10,6 +10,7 @@ import { SECTION_PRESETS, type PresetOption } from './font-utils'
 const props = defineProps<{
   fontFamily: string
   fontSize: number
+  showPhoto: boolean
   showEvents: boolean
   rsvpEnabled: boolean
 }>()
@@ -17,6 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:fontFamily': [value: string]
   'update:fontSize': [value: number]
+  'update:showPhoto': [value: boolean]
   'update:showEvents': [value: boolean]
   'update:rsvpEnabled': [value: boolean]
 }>()
@@ -93,9 +95,10 @@ const tools = [
 
     <Panel :open="activePanel === 'sections'" title="Sections & Visibility" @close="activePanel = null">
       <SectionsPanel
-        :show-photo="true"
+        :show-photo="showPhoto"
         :show-events="showEvents"
         :rsvp-enabled="rsvpEnabled"
+        @update:showPhoto="(v) => emit('update:showPhoto', v)"
         @update:showEvents="(v) => emit('update:showEvents', v)"
         @update:rsvpEnabled="(v) => emit('update:rsvpEnabled', v)"
       />

@@ -18,6 +18,8 @@ export const clients = sqliteTable(
     name: text('name').notNull(),
     phone: text('phone').notNull(),
     passcode: text('passcode').notNull().unique(),
+    shareToken: text('share_token'),
+    loginLinkTokenHash: text('login_link_token_hash').unique(),
     status: text('status', { enum: ['ACTIVE', 'READ_ONLY', 'ARCHIVED', 'DELETED'] })
       .notNull()
       .default('ACTIVE'),

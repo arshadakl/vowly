@@ -72,3 +72,22 @@ export function isInvitationLocked(input: {
   const now = input.now ?? new Date()
   return now.getTime() > endOfWeddingDay(input.weddingDate, input.timeZone).getTime()
 }
+
+/**
+ * Format a YYYY-MM-DD date string into a human-readable format.
+ * Uses en-IN locale with weekday, year, month, and day.
+ */
+export function formatDate(dateStr: string): string {
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return new Intl.DateTimeFormat('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    }).format(new Date(Date.UTC(year ?? 2000, (month ?? 1) - 1, day ?? 1)))
+  } catch {
+    return dateStr
+  }
+}

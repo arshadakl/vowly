@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl, fontIdToCss } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent, formatDate } from '@vowly/utils'
 import { CalendarDays, MapPin, ExternalLink, Sparkles, ArrowDown, Heart, Navigation, Clock3 } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -14,14 +14,15 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('ivory-arch')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'Arjun')
 const brideName = computed(() => inv.value.brideName || 'Meera')
 const weddingDate = computed(() => inv.value.weddingDate || '2026-12-01')
 const weddingTz = computed(() => inv.value.weddingTz || 'Asia/Kolkata')
-const venueName = computed(() => inv.value.events?.[0]?.venue || 'Manthan Beach Resort')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || 'Kapu, Udupi, Karnataka')
-const googleMapUrl = computed(() => inv.value.events?.[0]?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
+const venueName = computed(() => featuredEvent.value?.venue || 'Manthan Beach Resort')
+const venueAddress = computed(() => featuredEvent.value?.address || 'Kapu, Udupi, Karnataka')
+const googleMapUrl = computed(() => featuredEvent.value?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
 const whatsappNumber = computed(() => inv.value.customization.text.whatsappNumber || '')
 const showEvents = computed(() => inv.value.customization.showEvents !== false)
 const showPhotoSection = computed(() => inv.value.showImages !== false)
@@ -42,21 +43,6 @@ const saveTheDateText = computed(() => inv.value.customization.text.saveTheDateT
 const rsvpText = computed(() => inv.value.customization.text.rsvpText || 'RSVP')
 const footerTitle = computed(() => inv.value.customization.text.footerTitle || 'We look forward to celebrating with you!')
 const footerLocation = computed(() => inv.value.customization.text.footerLocation || 'Kapu Beach \u2022 Udupi \u2022 Karnataka')
-
-const formatDate = (dateStr: string) => {
-  try {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    return new Intl.DateTimeFormat('en-IN', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(Date.UTC(year ?? 2000, (month ?? 1) - 1, day ?? 1)))
-  } catch {
-    return dateStr
-  }
-}
 
 const weddingDateFull = computed(() => formatDate(weddingDate.value))
 
