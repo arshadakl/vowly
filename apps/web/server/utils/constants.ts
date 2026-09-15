@@ -1,4 +1,4 @@
-export const STUDIO_NAME = 'Vowly'
+export const STUDIO_NAME = 'Lace & Looms'
 
 export const DEFAULT_STUDIO = {
   name: STUDIO_NAME,

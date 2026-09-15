@@ -90,7 +90,7 @@ export function previewInvitation(
         ? source.customization
         : DEFAULT_TEMPLATE_CUSTOMIZATION),
     ogImageUrl: source?.ogImageUrl ?? null,
-    studio: source?.studio ?? { name: 'Vowly', instagram: null, phone: null },
+    studio: source?.studio ?? { name: 'Lace & Looms', instagram: null, phone: null },
   }
 }
 

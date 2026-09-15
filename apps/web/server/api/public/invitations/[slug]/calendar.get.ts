@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     timeZone: row!.wedding_tz,
     venue: row!.venue,
     address: row!.address,
-    description: 'Wedding invitation from Vowly',
+    description: 'Wedding invitation from Lace & Looms',
   })
   setResponseHeader(event, 'Content-Type', 'text/calendar; charset=utf-8')
   setResponseHeader(event, 'Content-Disposition', 'attachment; filename="wedding-invitation.ics"')
