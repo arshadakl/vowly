@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent } from '@vowly/utils'
 import { Calendar, MapPin, Clock, Sparkles, ExternalLink } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -14,6 +14,7 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('premium-floral')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'ADITYA')
 const brideName = computed(() => inv.value.brideName || 'ANANYA')
@@ -25,8 +26,8 @@ const heroIntro = computed(() => inv.value.customization.text.heroIntro || 'in h
 const weddingDay = computed(() => inv.value.customization.text.weddingDay || 'Saturday')
 const weddingTimeDisplay = computed(() => inv.value.customization.text.weddingTime || '3:00 PM EST')
 const setting = computed(() => inv.value.customization.text.setting || 'By the Pool')
-const venueName = computed(() => inv.value.events?.[0]?.venue || 'The Lyle Hotel')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || '1731 New Hampshire Ave NW, Washington, DC 20009')
+const venueName = computed(() => featuredEvent.value?.venue || 'The Lyle Hotel')
+const venueAddress = computed(() => featuredEvent.value?.address || '1731 New Hampshire Ave NW, Washington, DC 20009')
 const countdownSubtitle = computed(() => inv.value.customization.text.countdownSubtitle || 'Interactive Countdown Timer')
 const countdownTitle = computed(() => inv.value.customization.text.countdownTitle || 'Build excitement for the big day')
 const locationSubtitle = computed(() => inv.value.customization.text.locationSubtitle || 'Google Maps Navigation')
@@ -42,7 +43,7 @@ const showPhotoSection = computed(() => inv.value.showImages !== false)
 const couplePhoto = computed(() => inv.value.coupleImageUrl || inv.value.brideImage || '')
 
 const googleMapUrl = computed(() => {
-  const url = inv.value.events?.[0]?.googleMapUrl
+  const url = featuredEvent.value?.googleMapUrl
   if (url) return url
   return googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`)
 })
@@ -52,8 +53,8 @@ const calendarUrl = computed(() => {
   const details = encodeURIComponent(`Join us for the celebration in honor of ${groomName.value} and ${brideName.value}!`)
   const location = encodeURIComponent(`${venueName.value}, ${venueAddress.value}`)
   const dateStr = weddingDate.value.replace(/-/g, '')
-  const startTime = (inv.value.events?.[0]?.startTime || '19:00').replace(':', '') + '00'
-  const endTime = (inv.value.events?.[0]?.endTime || '23:00').replace(':', '') + '00'
+  const startTime = (featuredEvent.value?.startTime || '19:00').replace(':', '') + '00'
+  const endTime = (featuredEvent.value?.endTime || '23:00').replace(':', '') + '00'
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}T${startTime}Z/${dateStr}T${endTime}Z&details=${details}&location=${location}`
 })
 
@@ -69,7 +70,7 @@ provide('invitation', inv)
       '--surface': def.ogTheme.background,
       '--ink': def.ogTheme.foreground,
       '--accent': def.ogTheme.accent,
-      fontFamily: `'Montserrat', sans-serif`,
+      fontFamily: fontIdToCss(inv.customization?.fontFamily),
     }"
   >
     <!-- ==================== HERO SECTION ==================== -->

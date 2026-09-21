@@ -3,6 +3,7 @@ import { defineAsyncComponent, type Component } from 'vue'
 import type { PublicInvitation, TemplateId, TemplateTextStyle } from '@vowly/types'
 import { templateEditorKey } from '~/composables/useTemplateEditor'
 import { templateComponents } from '~/utils/templates'
+import TemplateBrandFooter from '~/components/templates/shared/TemplateBrandFooter.vue'
 
 const props = withDefaults(defineProps<{ invitation: PublicInvitation; editable?: boolean }>(), {
   editable: false,
@@ -30,4 +31,5 @@ provide(templateEditorKey, {
 
 <template>
   <component :is="component" :invitation="invitation" />
+  <TemplateBrandFooter :template="invitation.template" />
 </template>

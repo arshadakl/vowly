@@ -1,6 +1,7 @@
 import { clientCreateSchema } from '@vowly/types'
-import { formatClientCode, generatePasscode } from '@vowly/utils'
+import { formatClientCode, generatePasscode, hashPasscode } from '@vowly/utils'
 import { apiError, body, requireAdmin } from '../../../utils/http'
+import { hashToken } from '../../../utils/auth'
 import { getEnv } from '../../../utils/env'
 
 function present(row: Record<string, unknown>) {
@@ -9,7 +10,6 @@ function present(row: Record<string, unknown>) {
     clientCode: row.client_code,
     name: row.name,
     phone: row.phone,
-    passcode: row.passcode,
     status: row.status,
     weddingDate: row.wedding_date,
     weddingTz: row.wedding_tz,
@@ -23,6 +23,8 @@ export default defineEventHandler(async (event) => {
   if (!parsed.success) apiError('INVALID_INPUT', 'Name, phone, and wedding date are required.', 400)
 
   const db = getEnv(event).DB
+  const duplicate = await db.prepare('SELECT id FROM clients WHERE phone = ?').bind(parsed.data.phone).first()
+  if (duplicate) apiError('PHONE_CONFLICT', 'A client already uses this phone number.', 409)
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const latest = await db
       .prepare(
@@ -31,23 +33,18 @@ export default defineEventHandler(async (event) => {
       .first<{ client_code: string }>()
     const nextNumber = (latest ? Number.parseInt(latest.client_code.slice(3), 10) : 0) + 1 + attempt
     const code = formatClientCode(nextNumber)
-    let passcode = generatePasscode()
-    for (let passcodeAttempt = 0; passcodeAttempt < 5; passcodeAttempt += 1) {
-      if (!(await db.prepare('SELECT id FROM clients WHERE passcode = ?').bind(passcode).first()))
-        break
-      passcode = generatePasscode()
-    }
-    if (await db.prepare('SELECT id FROM clients WHERE passcode = ?').bind(passcode).first())
-      continue
+    const passcode = generatePasscode()
+    const passcodeHash = await hashPasscode(passcode)
+    const loginToken = crypto.randomUUID() + crypto.randomUUID()
 
     const id = crypto.randomUUID()
     try {
       await db.batch([
         db
           .prepare(
-            "INSERT INTO clients (id, client_code, name, phone, passcode, status, wedding_date) VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?)",
+            "INSERT INTO clients (id, client_code, name, phone, passcode, share_token, login_link_token_hash, status, wedding_date) VALUES (?, ?, ?, ?, ?, NULL, ?, 'ACTIVE', ?)",
           )
-          .bind(id, code, parsed.data.name, parsed.data.phone, passcode, parsed.data.weddingDate),
+          .bind(id, code, parsed.data.name, parsed.data.phone, passcodeHash, await hashToken(loginToken), parsed.data.weddingDate),
         db
           .prepare('INSERT INTO invitations (id, client_id) VALUES (?, ?)')
           .bind(crypto.randomUUID(), id),
@@ -58,9 +55,9 @@ export default defineEventHandler(async (event) => {
         .first<Record<string, unknown>>()
       if (!created) apiError('INTERNAL', 'Client was created but could not be loaded.', 500)
       setResponseStatus(event, 201)
-      return present(created)
+      return { ...present(created), passcode, loginToken }
     } catch {
-      // Retry unique-code/passcode conflicts caused by concurrent admin requests.
+      // Retry unique-code conflicts caused by concurrent admin requests.
     }
   }
 

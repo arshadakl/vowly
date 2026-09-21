@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
+import type { PublicInvitation } from '@vowly/types'
 import { inject } from 'vue'
 import { Calendar, Clock, Heart, Sparkles } from 'lucide-vue-next'
 
@@ -22,14 +23,14 @@ const props = withDefaults(
 )
 
 const dateValue = computed(() => {
-  const inv = inject<Ref<any>>('invitation')
+  const inv = inject<Ref<PublicInvitation>>('invitation')
   const val = inv?.value
   if (!val?.weddingDate) return 'Saturday, 12 December 2026'
   return formatDate(val.weddingDate)
 })
 
 const events = computed(() => {
-  const inv = inject<Ref<any>>('invitation')
+  const inv = inject<Ref<PublicInvitation>>('invitation')
   const val = inv?.value
   const firstEvent = val?.events?.[0]
   return [

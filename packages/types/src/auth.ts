@@ -10,7 +10,15 @@ export const adminLoginSchema = z.object({
 export type AdminLogin = z.infer<typeof adminLoginSchema>
 
 export const clientLoginSchema = z.object({
-  passcode: z.string().trim().regex(/^[a-hjkmnop-z2-9]{6}$/, 'Invalid passcode'),
+  passcode: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .refine(
+      (val) => /^[a-hjkmnop-z2-9]{6}$/.test(val) || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(val),
+      'Invalid passcode',
+    ),
   phone: phoneSchema,
 })
 

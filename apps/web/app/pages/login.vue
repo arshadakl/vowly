@@ -8,7 +8,6 @@ useSeoMeta({
 
 const route = useRoute()
 const api = useApi()
-const queryKey = route.query.key
 const redirectTarget =
   typeof route.query.redirect === 'string' &&
   route.query.redirect.startsWith('/') &&
@@ -16,28 +15,31 @@ const redirectTarget =
     ? route.query.redirect
     : '/client'
 const client = reactive<ClientLogin>({
-  passcode: typeof queryKey === 'string' ? queryKey.trim().toLowerCase() : '',
+  passcode: '',
   phone: '',
 })
 const errorMessage = ref<string | null>(null)
 const loading = ref(false)
-const hasMagicKey = computed(() => typeof queryKey === 'string' && queryKey.length > 0)
+const hasMagicKey = ref(false)
+
+onMounted(() => {
+  const params = new URLSearchParams(window.location.hash.slice(1))
+  const key = params.get('key')
+  if (!key) return
+  client.passcode = key.trim().toLowerCase()
+  hasMagicKey.value = true
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+})
 
 async function onSubmit() {
   errorMessage.value = null
   loading.value = true
 
   try {
-    // Passcodes are generated in lowercase, but users may type or paste them
-    // in uppercase. Normalize before validation so the login request is
-    // consistent with magic-link logins.
     client.passcode = client.passcode.trim().toLowerCase()
     await api('/auth/client/login', { method: 'POST', body: client })
-    // Confirm that the browser can immediately read the newly-created session
-    // before leaving the login page. A full document navigation then guarantees
-    // the destination's initial SSR request includes the cookie.
     await api('/auth/client/me')
-    window.location.assign(redirectTarget)
+    await navigateTo(redirectTarget)
   } catch (error: unknown) {
     errorMessage.value = error instanceof Error ? error.message : 'Login failed'
   } finally {
@@ -47,51 +49,53 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center bg-ivory-50 px-6">
-    <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
-      <p class="text-center text-xs uppercase tracking-[0.25em] text-gold-600">Vowly</p>
-      <h1 class="mt-3 text-center font-display text-3xl">Client Login</h1>
-      <p class="mt-2 text-center text-sm text-ink-700">Open your wedding invitation workspace.</p>
+  <div class="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-8">
+    <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <p class="text-center text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">Lace &amp; Looms</p>
+      <h1 class="mt-3 text-center text-2xl font-bold tracking-tight text-slate-950">Client Login</h1>
+      <p class="mt-2 text-center text-sm text-slate-500">Open your wedding invitation workspace.</p>
       <form class="mt-8 space-y-4" @submit.prevent="onSubmit">
         <div>
-          <label class="block text-sm text-ink-700">Passcode</label>
+          <label class="block text-sm font-medium text-slate-700">Passcode</label>
           <input
             v-if="!hasMagicKey"
             v-model="client.passcode"
             type="text"
             required
-            maxlength="6"
+            maxlength="36"
             autocomplete="one-time-code"
-            class="mt-1 w-full rounded-lg border border-ink-800/20 bg-white px-4 py-3 outline-none focus:border-gold-500"
+            class="saas-input mt-1"
           />
-          <p v-else class="mt-1 rounded-lg bg-ivory-100 px-4 py-3 text-ink-700">
-            {{ client.passcode }}
-          </p>
+          <input
+            v-else
+            :value="client.passcode"
+            type="text"
+            readonly
+            class="saas-input mt-1 bg-slate-100 text-slate-700"
+          />
         </div>
         <div>
-          <label class="block text-sm text-ink-700">Phone number</label>
+          <label class="block text-sm font-medium text-slate-700">Phone number</label>
           <input
             v-model="client.phone"
             type="tel"
             required
             autocomplete="tel"
             placeholder="9876543210"
-            class="mt-1 w-full rounded-lg border border-ink-800/20 bg-white px-4 py-3 outline-none focus:border-gold-500"
+            class="saas-input mt-1"
           />
         </div>
-        <p v-if="errorMessage" class="text-sm text-red-600">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ errorMessage }}</p>
         <button
           type="submit"
           :disabled="loading"
-          class="w-full rounded-full bg-ink-900 py-3 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-gold-600 disabled:opacity-50"
+          class="saas-button w-full"
         >
-          {{ loading ? 'Please wait...' : 'Continue' }}
+          {{ loading ? 'Please wait...' : 'Sign in' }}
         </button>
       </form>
-      <NuxtLink
-        to="/x/login"
-        class="mt-6 block text-center text-sm text-ink-700 hover:text-gold-600"
-        >Admin access</NuxtLink
+      <NuxtLink to="/x/login" class="mt-6 block text-center text-sm font-medium text-indigo-600 hover:text-indigo-700"
+        >Admin login</NuxtLink
       >
     </div>
   </div>

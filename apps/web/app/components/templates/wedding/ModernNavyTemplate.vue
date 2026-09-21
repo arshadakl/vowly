@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent } from '@vowly/utils'
 import { CalendarDays, Clock3, MapPin, Navigation, Sparkles } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -14,14 +14,15 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('modern-navy')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'Daniel')
 const brideName = computed(() => inv.value.brideName || 'Olivia')
 const weddingDate = computed(() => inv.value.weddingDate || '2028-06-17')
 const weddingTz = computed(() => inv.value.weddingTz || 'Asia/Kolkata')
-const venueName = computed(() => inv.value.events?.[0]?.venue || 'Borcelle Ballroom')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || '123 Celebration Boulevard, Grand City')
-const googleMapUrl = computed(() => inv.value.events?.[0]?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
+const venueName = computed(() => featuredEvent.value?.venue || 'Borcelle Ballroom')
+const venueAddress = computed(() => featuredEvent.value?.address || '123 Celebration Boulevard, Grand City')
+const googleMapUrl = computed(() => featuredEvent.value?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
 const whatsappNumber = computed(() => inv.value.customization.text.whatsappNumber || '')
 const showEvents = computed(() => inv.value.customization.showEvents !== false)
 const showPhotoSection = computed(() => inv.value.showImages !== false)
@@ -85,8 +86,8 @@ const googleCalendarUrl = computed(() => {
   const details = `Join us for a celebration at the wedding of ${coupleNames.value}!`
   const location = `${venueName.value}, ${venueAddress.value}`
   const dateStr = weddingDate.value.replace(/-/g, '')
-  const startTime = (inv.value.events?.[0]?.startTime || '16:00').replace(':', '') + '00'
-  const endTime = (inv.value.events?.[0]?.endTime || '23:00').replace(':', '') + '00'
+  const startTime = (featuredEvent.value?.startTime || '16:00').replace(':', '') + '00'
+  const endTime = (featuredEvent.value?.endTime || '23:00').replace(':', '') + '00'
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(text)}&dates=${dateStr}T${startTime}Z/${dateStr}T${endTime}Z&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`
 })
 
@@ -102,7 +103,7 @@ provide('invitation', inv)
       '--surface': def.ogTheme.background,
       '--ink': def.ogTheme.foreground,
       '--accent': def.ogTheme.accent,
-      fontFamily: `'Lora', Georgia, serif`,
+      fontFamily: fontIdToCss(inv.customization?.fontFamily),
     }"
   >
     <!-- ==================== HERO ==================== -->

@@ -149,8 +149,12 @@ function classifyUrl(url: URL): GoogleMapResult['type'] {
 /**
  * Build an embeddable Google Maps URL.
  * Uses the query-based format which works reliably across origins.
+ * When only a placeId is available (no coordinates), uses the pb format.
  */
-function buildEmbedUrl(latitude: number, longitude: number, _placeId?: string): string {
+function buildEmbedUrl(latitude: number, longitude: number, placeId?: string): string {
+  if (latitude === 0 && longitude === 0 && placeId) {
+    return `https://maps.google.com/maps?q=place_id:${placeId}&z=15&output=embed&hl=en`
+  }
   return `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed&t=&ie=UTF8&iwloc=&hl=en`
 }
 

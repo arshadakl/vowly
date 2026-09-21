@@ -25,7 +25,12 @@ export const clientCreateSchema = z.object({
 
 export type ClientCreate = z.infer<typeof clientCreateSchema>
 
-export const clientUpdateSchema = clientCreateSchema.partial()
+export const clientUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  phone: phoneSchema.optional(),
+  weddingDate: calendarDateSchema.optional(),
+  weddingTz: z.string().trim().min(1).max(40).optional(),
+})
 
 export type ClientUpdate = z.infer<typeof clientUpdateSchema>
 
@@ -48,7 +53,6 @@ export interface Client {
   clientCode: string
   name: string
   phone: string
-  passcode: string
   status: ClientStatus
   weddingDate: string
   weddingTz: string

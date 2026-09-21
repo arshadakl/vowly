@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent, formatDate } from '@vowly/utils'
 import { Calendar, MapPin, Clock, Sparkles, ExternalLink, Heart } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -13,6 +13,7 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('lavender-blush-proposal')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'Rizwan')
 const brideName = computed(() => inv.value.brideName || 'Ayesha')
@@ -25,9 +26,9 @@ const heroEventText = computed(() => inv.value.customization.text.heroEventText 
 const countdownTitle = computed(() => inv.value.customization.text.countdownTitle || 'Counting the Moments')
 const countdownEndedTitle = computed(() => inv.value.customization.text.countdownEndedTitle || 'Wedding in Progress!')
 const countdownEndedSubtitle = computed(() => inv.value.customization.text.countdownEndedSubtitle || 'Thank you for celebrating this joyful occasion with us.')
-const venueName = computed(() => inv.value.events?.[0]?.venue || 'Grand Palace Hall')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || 'Calicut, Kerala')
-const googleMapUrl = computed(() => inv.value.events?.[0]?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
+const venueName = computed(() => featuredEvent.value?.venue || 'Grand Palace Hall')
+const venueAddress = computed(() => featuredEvent.value?.address || 'Calicut, Kerala')
+const googleMapUrl = computed(() => featuredEvent.value?.googleMapUrl || googleMapsOpenUrl(`${venueName.value} ${venueAddress.value}`))
 const whatsappNumber = computed(() => inv.value.customization.text.whatsappNumber || '')
 const showEvents = computed(() => inv.value.customization.showEvents !== false)
 const showPhotoSection = computed(() => inv.value.showImages !== false)
@@ -40,21 +41,6 @@ const monogram = computed(() => {
   return `${g} & ${b}`
 })
 
-const formatDate = (dateStr: string) => {
-  try {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    return new Intl.DateTimeFormat('en-IN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(Date.UTC(year ?? 2000, (month ?? 1) - 1, day ?? 1)))
-  } catch {
-    return dateStr
-  }
-}
-
 provide('invitation', inv)
 </script>
 
@@ -65,7 +51,7 @@ provide('invitation', inv)
       containerType: 'inline-size',
       fontSize: `${inv.customization?.fontSize || 14}px`,
       backgroundColor: '#fdf6f0',
-      fontFamily: `'Playfair Display', 'Cormorant Garamond', Georgia, serif`,
+      fontFamily: fontIdToCss(inv.customization?.fontFamily),
     }"
   >
     <!-- ==================== HERO SECTION ==================== -->

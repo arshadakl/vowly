@@ -26,7 +26,7 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: 'en' },
       titleTemplate: '%s %separator %pageName',
-      title: 'Vowly',
+      title: 'Lace & Looms',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       ],

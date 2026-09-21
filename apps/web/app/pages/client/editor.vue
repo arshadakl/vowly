@@ -17,7 +17,6 @@ import {
 } from 'lucide-vue-next'
 import { invitationUpdateBody, previewInvitation } from '~/utils/template-preview'
 import EditorToolbar from '~/components/editor/EditorToolbar.vue'
-import { getEditorCSSVars } from '~/components/editor/font-utils'
 
 useSeoMeta({ title: 'Customize invitation', robots: 'noindex, nofollow' })
 
@@ -34,6 +33,7 @@ const errorMessage = ref<string | null>(null)
 const saveTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const hydrated = ref(false)
 const applyingServerState = ref(false)
+const saveQueued = ref(false)
 
 /**
  * Editor state is a deeply reactive Vue Proxy. Browser structuredClone()
@@ -67,15 +67,6 @@ const preview = computed<PublicInvitation | null>(() => {
   return previewInvitation(template.value, invitation.value, invitation.value.customization)
 })
 
-const editorCSSVars = computed(() =>
-  invitation.value
-    ? getEditorCSSVars({
-        fontFamily: invitation.value.customization.fontFamily,
-        fontSize: invitation.value.customization.fontSize,
-      })
-    : {},
-)
-
 watch(
   invitation,
   () => {
@@ -83,10 +74,14 @@ watch(
       !hydrated.value ||
       applyingServerState.value ||
       saving.value ||
-      !invitation.value?.template ||
-      invitation.value.locked
+      !invitation.value?.template || invitation.value.locked
     )
       return
+    if (saving.value) {
+      saveQueued.value = true
+      saveState.value = 'unsaved'
+      return
+    }
     saveState.value = 'unsaved'
     if (saveTimer.value) clearTimeout(saveTimer.value)
     saveTimer.value = setTimeout(() => void saveAll(false), 900)
@@ -126,20 +121,24 @@ async function saveAll(showMessage = true) {
     if (!snapshot.template) throw new Error('Choose a template before saving.')
     const templateId = snapshot.template
     const customization = clone(snapshot.customization)
-    const [saved] = await Promise.all([
-      api<EditorInvitation>('/client/invitation', {
-        method: 'PUT',
-        body: invitationUpdateBody(snapshot),
-      }),
-      api('/client/invitation/customization', {
-        method: 'PUT',
-        body: { template: templateId, customization },
-      }),
-    ])
+    const saved = await api<EditorInvitation>('/client/invitation', {
+      method: 'PUT',
+      body: invitationUpdateBody(snapshot),
+    })
+    await api('/client/invitation/customization', {
+      method: 'PUT',
+      body: { template: templateId, customization },
+    })
     saved.customization = clone(customization)
     saved.customizations[templateId] = clone(customization)
-    await applyServerInvitation(saved)
-    saveState.value = 'saved'
+    if (saveQueued.value) {
+      // Preserve input typed while the request was in flight; it is saved immediately below.
+      savedInvitation.value = clone(saved)
+      saveState.value = 'unsaved'
+    } else {
+      await applyServerInvitation(saved)
+      saveState.value = 'saved'
+    }
     if (showMessage) message.value = 'All changes saved.'
     return true
   } catch (error: unknown) {
@@ -148,6 +147,10 @@ async function saveAll(showMessage = true) {
     return false
   } finally {
     saving.value = false
+    if (saveQueued.value) {
+      saveQueued.value = false
+      void saveAll(false)
+    }
   }
 }
 
@@ -477,6 +480,16 @@ async function publish() {
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p class="text-xs font-semibold uppercase tracking-[.18em] text-indigo-600">WhatsApp RSVP</p>
+          <p class="mt-2 text-sm text-slate-500">Guests send replies directly to this number; Lace &amp; Looms does not store them.</p>
+          <label class="mt-4 block text-sm font-medium">WhatsApp number
+            <input v-model="invitation.customization.text.whatsappNumber" type="tel" maxlength="20" placeholder="919876543210" class="saas-input mt-1">
+          </label>
+          <label class="mt-3 flex items-center gap-2 text-sm"><input v-model="invitation.rsvpEnabled" type="checkbox"> Show WhatsApp RSVP</label>
+          <p v-if="invitation.rsvpEnabled && !/^\d{8,15}$/.test((invitation.customization.text.whatsappNumber || '').replace(/\D/g, ''))" class="mt-2 text-xs text-amber-700">Add a valid WhatsApp number before publishing RSVP.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs font-semibold uppercase tracking-[.18em] text-indigo-600">
@@ -572,10 +585,7 @@ async function publish() {
                   containerType: 'inline-size',
                   width: '100%',
                   maxWidth: '100%',
-                  ...editorCSSVars,
                 }"
-                :data-hide-events="invitation.customization.showEvents ? undefined : 'true'"
-                :data-hide-rsvp="invitation.rsvpEnabled ? undefined : 'true'"
               >
                 <TemplateRenderer
                   :invitation="preview"
@@ -609,10 +619,9 @@ async function publish() {
       v-if="invitation"
       v-model:font-family="invitation.customization.fontFamily"
       v-model:font-size="invitation.customization.fontSize"
+      v-model:show-photo="invitation.showImages"
       v-model:show-events="invitation.customization.showEvents"
       v-model:rsvp-enabled="invitation.rsvpEnabled"
     />
   </div>
 </template>
-
-

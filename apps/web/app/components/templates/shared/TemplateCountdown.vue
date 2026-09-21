@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { countdownParts, startOfLocalDate } from '@vowly/utils'
 
-const props = defineProps<{ date: string; timeZone: string; time?: string | null }>()
+export type CountdownTheme = 'light' | 'dark' | 'crimson' | 'navy' | 'emerald' | 'gold'
+
+const props = withDefaults(
+  defineProps<{
+    date: string
+    timeZone: string
+    time?: string | null
+    theme?: CountdownTheme
+  }>(),
+  { theme: 'light' },
+)
 const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
@@ -22,6 +32,18 @@ const items = computed(() => [
   { label: 'Mins', value: parts.value.minutes },
   { label: 'Secs', value: parts.value.seconds },
 ])
+
+const themeStyles = computed(() => {
+  const themes: Record<CountdownTheme, { valueColor: string; labelColor: string; bg: string; border: string }> = {
+    light: { valueColor: '#4A171F', labelColor: '#78716c', bg: 'rgba(255,255,255,0.9)', border: 'rgba(168,162,158,0.3)' },
+    dark: { valueColor: '#F5EBE0', labelColor: '#A89878', bg: 'rgba(24,19,11,0.8)', border: 'rgba(212,175,55,0.3)' },
+    crimson: { valueColor: '#8A212E', labelColor: '#8C6D65', bg: 'rgba(255,253,251,0.95)', border: 'rgba(128,0,32,0.15)' },
+    navy: { valueColor: '#F4E096', labelColor: '#94A3B8', bg: 'rgba(17,35,62,0.85)', border: 'rgba(251,191,36,0.3)' },
+    emerald: { valueColor: '#A7F3D0', labelColor: '#6EE7B7', bg: 'rgba(21,52,44,0.85)', border: 'rgba(52,211,153,0.3)' },
+    gold: { valueColor: '#FAF5E6', labelColor: '#D8C7A5', bg: 'rgba(35,27,16,0.85)', border: 'rgba(212,175,55,0.3)' },
+  }
+  return themes[props.theme] ?? themes.light
+})
 </script>
 
 <template>
@@ -32,40 +54,40 @@ const items = computed(() => [
     <div
       v-for="item in items"
       :key="item.label"
-      style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        border-radius: 1rem;
-        border: 1px solid rgba(168, 162, 158, 0.3);
-        background: rgba(255, 255, 255, 0.9);
-        padding: 0.875rem 0.25rem;
-        text-align: center;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-      "
+      :style="{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        borderRadius: '1rem',
+        border: `1px solid ${themeStyles.border}`,
+        background: themeStyles.bg,
+        padding: '0.875rem 0.25rem',
+        textAlign: 'center',
+        boxShadow: '0 8px 20px rgba(0,0,0,0.03)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
+      }"
     >
       <span
-        style="
-          display: block;
-          font-size: 1.5rem;
-          line-height: 1;
-          font-weight: 600;
-          font-variant-numeric: tabular-nums;
-          color: #4A171F;
-        "
+        :style="{
+          display: 'block',
+          fontSize: '1.5rem',
+          lineHeight: '1',
+          fontWeight: '600',
+          fontVariantNumeric: 'tabular-nums',
+          color: themeStyles.valueColor,
+        }"
       >{{ String(item.value).padStart(2, '0') }}</span>
       <span
-        style="
-          display: block;
-          margin-top: 0.25rem;
-          font-size: 9.5px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: #78716c;
-        "
+        :style="{
+          display: 'block',
+          marginTop: '0.25rem',
+          fontSize: '9.5px',
+          fontWeight: '700',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          color: themeStyles.labelColor,
+        }"
       >{{ item.label }}</span>
     </div>
   </div>

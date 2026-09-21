@@ -1,8 +1,11 @@
 import { googleMapsResolveSchema } from '@vowly/types'
 import { isShortGoogleMapsLink, isValidGoogleMapsUrl } from '@vowly/utils'
 import { apiError, body } from '../../utils/http'
+import { checkRateLimit, MAPS_RATE_LIMIT } from '../../utils/rate-limit'
 
 export default defineEventHandler(async (event) => {
+  const rl = await checkRateLimit(event, MAPS_RATE_LIMIT)
+  if (!rl.allowed) apiError('RATE_LIMITED', 'Too many map requests. Please try again later.', 429)
   const parsed = googleMapsResolveSchema.safeParse(await body(event))
   if (!parsed.success) apiError('INVALID_INPUT', 'A valid URL is required.', 400)
   const { url } = parsed.data

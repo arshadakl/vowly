@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { EditorInvitation, RsvpData } from '~/types/client-wizard'
 import type { TemplateId } from '@vowly/types'
-import { Check, Copy, ExternalLink, Eye, Heart, LogOut, PencilLine } from 'lucide-vue-next'
+import { Check, Copy, ExternalLink, Eye, LogOut, PencilLine } from 'lucide-vue-next'
 import { invitationUpdateBody, previewInvitation } from '~/utils/template-preview'
 import { templateDefinitions } from '~/utils/templates'
 import TemplatePreviewModal from '~/components/client/TemplatePreviewModal.vue'
@@ -120,13 +120,8 @@ onBeforeUnmount(() => {
     <header class="sticky top-0 z-40 border-b border-stone-200/80 bg-white/90 backdrop-blur-xl">
       <div class="mx-auto flex min-h-16 max-w-7xl items-center justify-between px-4 sm:px-8">
         <NuxtLink to="/client" class="flex items-center gap-3">
-          <span class="grid h-9 w-9 place-items-center rounded-full bg-rose-950 text-white">
-            <Heart class="h-4 w-4" />
-          </span>
-          <span
-            ><b class="block text-sm">Vowly</b
-            ><small class="text-stone-500">Template studio</small></span
-          >
+          <img src="/logo/logo-000000.png" alt="Lace & Looms" class="h-8 w-auto max-w-40 object-contain" />
+          <small class="text-stone-500">Template studio</small>
         </NuxtLink>
         <button class="saas-icon-button" aria-label="Log out" @click="logout">
           <LogOut class="h-4 w-4" />

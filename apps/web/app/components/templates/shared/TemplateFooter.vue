@@ -41,13 +41,13 @@ const props = withDefaults(
       </span>
     </div>
     <!-- Blessing -->
-    <p class="mx-auto max-w-[260px] text-xs sm:text-sm font-light leading-relaxed" :class="textColor" style="color: #57534e">
+    <p class="mx-auto max-w-[260px] text-xs sm:text-sm font-light leading-relaxed" :class="textColor">
       {{ blessing }}
     </p>
     <!-- Decorative: stars + heart -->
     <div class="mt-5 flex items-center justify-center gap-2">
       <span class="text-xs" :class="accentColor">&#10038;</span>
-      <Heart :size="12" class="fill-current" :class="heartColor" style="color: #8A212E" />
+      <Heart :size="12" class="fill-current" :class="heartColor" />
       <span class="text-xs" :class="accentColor">&#10038;</span>
     </div>
   </footer>

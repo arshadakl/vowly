@@ -124,7 +124,7 @@ export async function presentEditor(
     weddingDate: context.client.wedding_date,
     weddingTz: context.client.wedding_tz,
     locked: context.locked,
-    studio: { name: 'Vowly', instagram: null, phone: null },
+    studio: { name: 'Lace & Looms', instagram: null, phone: null },
     events: rows.results.map((item) => ({
       id: item.id,
       invitationId: item.invitation_id,

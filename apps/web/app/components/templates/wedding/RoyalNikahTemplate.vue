@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicInvitation } from '@vowly/types'
 import { getTemplateDefinition } from '@vowly/types'
-import { googleMapsOpenUrl } from '@vowly/utils'
+import { googleMapsOpenUrl, fontIdToCss, getFeaturedVenueEvent } from '@vowly/utils'
 import { MapPin, Sparkles } from 'lucide-vue-next'
 import TemplateEditable from '~/components/templates/shared/TemplateEditable.vue'
 import TemplateCountdown from '~/components/templates/shared/TemplateCountdown.vue'
@@ -14,6 +14,7 @@ const props = defineProps<{ invitation: PublicInvitation }>()
 
 const def = getTemplateDefinition('royal-nikah')
 const inv = computed(() => props.invitation)
+const featuredEvent = computed(() => getFeaturedVenueEvent(inv.value.events, inv.value.featuredVenueEventId))
 
 const groomName = computed(() => inv.value.groomName || 'FAHAD')
 const brideName = computed(() => inv.value.brideName || 'AYESHA')
@@ -27,9 +28,9 @@ const locationDisplay = computed(() => inv.value.customization.text.locationDisp
 const heroImage = computed(() => inv.value.coverImage || def.backgroundImage)
 const sealText = computed(() => inv.value.customization.text.sealText || '• BLESSINGS • ALHAMDULILLAH ')
 const venueTag = computed(() => inv.value.customization.text.venueTag || 'Royal Venue')
-const venueName = computed(() => inv.value.events?.[0]?.venue || 'The Raviz Kadavu')
+const venueName = computed(() => featuredEvent.value?.venue || 'The Raviz Kadavu')
 const venueCity = computed(() => inv.value.customization.text.venueCity || 'Kozhikode (Calicut), Kerala')
-const venueAddress = computed(() => inv.value.events?.[0]?.address || 'NH 66, Bypass Road, Azhinjilam, Kerala 673632.\nJoin us as we celebrate love, heritage, and togetherness.')
+const venueAddress = computed(() => featuredEvent.value?.address || 'NH 66, Bypass Road, Azhinjilam, Kerala 673632.\nJoin us as we celebrate love, heritage, and togetherness.')
 const countdownTitle = computed(() => inv.value.customization.text.countdownTitle || 'Counting Down To Forever')
 const footerBlessing = computed(() => inv.value.customization.text.footerBlessing || 'With blessings from family & friends • Malabar, Kerala • October 2026')
 const whatsappNumber = computed(() => inv.value.customization.text.whatsappNumber || '')
@@ -38,7 +39,7 @@ const showPhotoSection = computed(() => inv.value.showImages !== false)
 const couplePhoto = computed(() => inv.value.coupleImageUrl || inv.value.brideImage || '')
 
 const googleMapUrl = computed(() => {
-  const url = inv.value.events?.[0]?.googleMapUrl
+  const url = featuredEvent.value?.googleMapUrl
   if (url) return url
   return googleMapsOpenUrl(`${venueName.value} ${venueCity.value} ${venueAddress.value}`)
 })
@@ -60,6 +61,7 @@ provide('invitation', inv)
       '--surface': def.ogTheme.background,
       '--ink': def.ogTheme.foreground,
       '--accent': def.ogTheme.accent,
+      fontFamily: fontIdToCss(inv.customization?.fontFamily),
     }"
   >
     <!-- ==================== HERO SECTION ==================== -->
