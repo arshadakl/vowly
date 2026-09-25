@@ -80,8 +80,16 @@ Configure these values under the build project's variables/secrets:
 
 - `CLOUDFLARE_API_TOKEN` — secret token with **Account → Cloudflare Pages → Edit**
   permission, restricted to the Vowly account.
-- `CLOUDFLARE_ACCOUNT_ID` — `69d7e5e3b8444560b5a95b46afce1828` if Cloudflare does
-  not provide the account automatically.
+- `CLOUDFLARE_ACCOUNT_ID` — `d2d71c52d0381df127528c8919382eb7` (account
+  `arshad-zero`), which owns both the `vowly` Pages project and the `vowly` D1
+  database. The login already has access to a second account (`arshad-v2`), so
+  set this value to avoid interactive account selection in CI.
+
+Note: `wrangler d1 migrations list/apply` currently ignores `account_id` in
+`wrangler.toml` (wrangler bug — it calls `requireAuth({})` with an empty config).
+Those commands require `CLOUDFLARE_ACCOUNT_ID` to be set explicitly. Other
+commands (`d1 execute`, `d1 list`, `pages deploy`, `pages project list`) pick up
+`account_id` from `wrangler.toml` correctly.
 
 If Wrangler reports API error `10000`, replace or rotate the token. Never commit or
 paste the token into the repository or issue logs.
