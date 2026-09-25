@@ -17,3 +17,19 @@ export const calendarDateSchema = z.string().refine(isValidCalendarDate, {
 export const timeSchema = z
   .string()
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'Expected a valid HH:MM time')
+
+function isIanaTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export const ianaTimeZoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40)
+  .refine(isIanaTimeZone, { message: 'Expected a valid IANA timezone' })
