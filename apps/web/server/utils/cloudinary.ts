@@ -45,14 +45,22 @@ export async function verifyCloudinaryAsset(
 ): Promise<CloudinaryAsset> {
   const config = cloudinaryConfig(event)
   const encodedPublicId = encodeURIComponent(expected.publicId)
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/resources/image/upload/${encodedPublicId}`,
-    {
-      headers: {
-        Authorization: `Basic ${btoa(`${config.apiKey}:${config.apiSecret}`)}`,
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
+  let response: Response
+  try {
+    response = await fetch(
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/resources/image/upload/${encodedPublicId}`,
+      {
+        headers: {
+          Authorization: `Basic ${btoa(`${config.apiKey}:${config.apiSecret}`)}`,
+        },
+        signal: controller.signal,
       },
-    },
-  )
+    )
+  } finally {
+    clearTimeout(timeout)
+  }
   if (!response.ok)
     apiError('MEDIA_VERIFICATION_FAILED', 'Could not verify the uploaded photo.', 400)
   const remote = (await response.json()) as {
@@ -90,9 +98,16 @@ export async function destroyCloudinaryAsset(event: H3Event, publicId: string): 
   form.set('invalidate', 'true')
   form.set('api_key', config.apiKey)
   form.set('signature', signature)
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/image/destroy`,
-    { method: 'POST', body: form },
-  )
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
+  let response: Response
+  try {
+    response = await fetch(
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/image/destroy`,
+      { method: 'POST', body: form, signal: controller.signal },
+    )
+  } finally {
+    clearTimeout(timeout)
+  }
   if (!response.ok) throw new Error('Cloudinary destroy request failed')
 }

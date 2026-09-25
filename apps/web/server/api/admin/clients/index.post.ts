@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     const code = formatClientCode(nextNumber)
     const passcode = generatePasscode()
     const passcodeHash = await hashPasscode(passcode)
-    const loginToken = crypto.randomUUID() + crypto.randomUUID()
+    const loginToken = crypto.randomUUID()
 
     const id = crypto.randomUUID()
     try {

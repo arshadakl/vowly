@@ -3,10 +3,13 @@ import { editorContext, assertEditable, presentEditor } from '../../../../utils/
 import { apiError, body } from '../../../../utils/http'
 import { destroyCloudinaryAsset, verifyCloudinaryAsset } from '../../../../utils/cloudinary'
 import { getEnv } from '../../../../utils/env'
+import { checkRateLimit, MEDIA_RATE_LIMIT } from '../../../../utils/rate-limit'
 
 export default defineEventHandler(async (event) => {
   const context = await editorContext(event)
   assertEditable(context)
+  const rl = await checkRateLimit(event, MEDIA_RATE_LIMIT)
+  if (!rl.allowed) apiError('RATE_LIMITED', 'Too many photo requests. Please try again later.', 429)
   const parsed = cloudinaryUploadConfirmationSchema.safeParse(await body(event))
   if (!parsed.success) apiError('INVALID_INPUT', 'Uploaded photo details are invalid.', 400)
   const asset = parsed.data

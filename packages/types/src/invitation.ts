@@ -8,6 +8,16 @@ import {
 } from './template'
 import { eventInputSchema, type InvitationEvent } from './event'
 
+const imageUrlSchema = z
+  .string()
+  .max(500)
+  .refine(
+    (value) => value === '' || /^https?:\/\//i.test(value),
+    'Expected an http(s) URL or an empty string',
+  )
+  .nullable()
+  .optional()
+
 export const invitationUpdateSchema = z.object({
   brideName: z.string().trim().max(60).default(''),
   groomName: z.string().trim().max(60).default(''),
@@ -15,9 +25,9 @@ export const invitationUpdateSchema = z.object({
   groomParents: z.string().trim().max(160).nullable().optional(),
   quote: z.string().trim().max(300).nullable().optional(),
   template: templateIdSchema.nullable().optional(),
-  coverImage: z.string().max(500).nullable().optional(),
-  brideImage: z.string().max(500).nullable().optional(),
-  groomImage: z.string().max(500).nullable().optional(),
+  coverImage: imageUrlSchema,
+  brideImage: imageUrlSchema,
+  groomImage: imageUrlSchema,
   showImages: z.boolean().optional(),
   rsvpEnabled: z.boolean().optional(),
   featuredVenueEventId: z.string().uuid().nullable().optional(),

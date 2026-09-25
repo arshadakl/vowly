@@ -68,6 +68,16 @@ order, backups, monitoring, rollback, and the security launch checklist are
 maintained in `docs/launch-readiness.md`. Do not create real Cloudflare
 resources as part of local development or automated verification.
 
+The `vowly` Pages project and D1 database live in account `arshad-zero`
+(`d2d71c52d0381df127528c8919382eb7`). Do NOT add `account_id` to
+`wrangler.toml`: the Cloudflare Pages build rejects it with
+"Configuration file for Pages projects does not support account_id".
+Instead, prepend `CLOUDFLARE_ACCOUNT_ID=d2d71c52d0381df127528c8919382eb7`
+when running any wrangler command non-interactively with multiple accounts
+present (this includes `pnpm db:migrate:*`, `pnpm seed:admin:*`, and
+`pnpm deploy:web`). On PowerShell:
+`$env:CLOUDFLARE_ACCOUNT_ID="d2d71c52d0381df127528c8919382eb7"; pnpm db:migrate:prod`.
+
 ## Tests
 
 Unit tests live in `packages/utils/src/*.test.ts`. API integration tests will be

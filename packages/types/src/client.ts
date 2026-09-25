@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { CLIENT_STATUSES, type ClientStatus } from './enums'
 import type { TemplateId } from './template'
-import { calendarDateSchema } from './date'
+import { calendarDateSchema, ianaTimeZoneSchema } from './date'
 
 export function normalizePhone(value: string): string {
   return value.trim().replace(/[()\s-]/g, '')
@@ -29,7 +29,7 @@ export const clientUpdateSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   phone: phoneSchema.optional(),
   weddingDate: calendarDateSchema.optional(),
-  weddingTz: z.string().trim().min(1).max(40).optional(),
+  weddingTz: ianaTimeZoneSchema.optional(),
 })
 
 export type ClientUpdate = z.infer<typeof clientUpdateSchema>
