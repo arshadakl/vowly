@@ -85,11 +85,12 @@ Configure these values under the build project's variables/secrets:
   database. The login already has access to a second account (`arshad-v2`), so
   set this value to avoid interactive account selection in CI.
 
-Note: `wrangler d1 migrations list/apply` currently ignores `account_id` in
-`wrangler.toml` (wrangler bug — it calls `requireAuth({})` with an empty config).
-Those commands require `CLOUDFLARE_ACCOUNT_ID` to be set explicitly. Other
-commands (`d1 execute`, `d1 list`, `pages deploy`, `pages project list`) pick up
-`account_id` from `wrangler.toml` correctly.
+Note: do NOT put `account_id` in `wrangler.toml`. The Cloudflare Pages build
+rejects it with "Configuration file for Pages projects does not support
+account_id", which fails every Pages deploy. Set `CLOUDFLARE_ACCOUNT_ID` in the
+environment instead. Every wrangler command that needs an account
+(`d1 migrations apply/list`, `d1 execute`, `pages deploy`, `seed:admin:*`) must
+run with this variable set when the login has access to more than one account.
 
 If Wrangler reports API error `10000`, replace or rotate the token. Never commit or
 paste the token into the repository or issue logs.

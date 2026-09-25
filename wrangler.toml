@@ -3,7 +3,6 @@ name = "vowly"
 compatibility_date = "2025-12-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "apps/web/dist"
-account_id = "d2d71c52d0381df127528c8919382eb7"
 
 [[d1_databases]]
 binding = "DB"
