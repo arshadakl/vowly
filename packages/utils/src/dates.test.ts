@@ -11,6 +11,10 @@ describe('tzOffsetMs', () => {
     const offset = tzOffsetMs('America/New_York', new Date('2026-01-15T12:00:00Z'))
     expect(offset).toBe(-18000000)
   })
+
+  it('falls back to UTC for an unknown timezone instead of throwing', () => {
+    expect(tzOffsetMs('Not/AZone', new Date('2026-08-06T12:00:00Z'))).toBe(0)
+  })
 })
 
 describe('endOfWeddingDay', () => {

@@ -36,4 +36,10 @@ describe('resolveSlug', () => {
     const taken = ['a-b', 'a-b-2', 'a-b-3']
     expect(resolveSlug('a-b', taken)).toBe('a-b-4')
   })
+
+  it('never loops unboundedly when every candidate is taken', () => {
+    const taken = Array.from({ length: 10_000 }, (_, i) => (i === 0 ? 'a-b' : `a-b-${i}`))
+    const result = resolveSlug('a-b', taken)
+    expect(result.startsWith('a-b-')).toBe(true)
+  })
 })

@@ -43,8 +43,10 @@ export function buildBaseSlug(brideName: string, groomName: string, weddingDate:
  */
 export function resolveSlug(base: string, taken: readonly string[]): string {
   if (!taken.includes(base)) return base
-  for (let i = 2; ; i++) {
+  const takenSet = new Set(taken)
+  for (let i = 2; i <= 10_000; i++) {
     const candidate = `${base}-${i}`
-    if (!taken.includes(candidate)) return candidate
+    if (!takenSet.has(candidate)) return candidate
   }
+  return `${base}-${Date.now().toString(36)}`
 }
