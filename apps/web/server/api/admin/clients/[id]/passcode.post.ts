@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   if (!id) apiError('INVALID_INPUT', 'Client id is required.', 400)
   const passcode = generatePasscode()
   const passcodeHash = await hashPasscode(passcode)
-  const loginToken = crypto.randomUUID() + crypto.randomUUID()
+  const loginToken = crypto.randomUUID()
   const result = await db
     .prepare('UPDATE clients SET passcode = ?, share_token = NULL, login_link_token_hash = ? WHERE id = ?')
     .bind(passcodeHash, await hashToken(loginToken), id)

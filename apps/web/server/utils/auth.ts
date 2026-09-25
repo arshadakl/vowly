@@ -50,9 +50,9 @@ export async function sessionSubject(event: H3Event, type: 'admin' | 'client') {
       .bind(session.subject_id)
       .first<{ id: string; username: string }>()
   return env.DB.prepare(
-    "SELECT * FROM clients WHERE id = ? AND status NOT IN ('DELETED', 'ARCHIVED')",
+    'SELECT id, client_code, name, phone, status, wedding_date, wedding_tz, created_at FROM clients WHERE id = ? AND status NOT IN (?, ?)',
   )
-    .bind(session.subject_id)
+    .bind(session.subject_id, 'DELETED', 'ARCHIVED')
     .first()
 }
 
