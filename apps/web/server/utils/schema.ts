@@ -16,7 +16,7 @@ export const clients = sqliteTable(
     id: text('id').primaryKey(),
     clientCode: text('client_code').notNull().unique(),
     name: text('name').notNull(),
-    phone: text('phone').notNull(),
+    phone: text('phone').notNull().unique(),
     passcode: text('passcode').notNull().unique(),
     shareToken: text('share_token'),
     loginLinkTokenHash: text('login_link_token_hash').unique(),
