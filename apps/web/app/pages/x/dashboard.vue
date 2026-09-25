@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Eye,
   MoreVertical,
   Pencil,
@@ -62,6 +63,19 @@ const menuPosition = reactive({ top: 0, left: 0 })
 async function copyLoginLink(loginToken: string) {
   const url = `${window.location.origin}/login#key=${encodeURIComponent(loginToken)}`
   await navigator.clipboard?.writeText(url)
+}
+
+async function copyClientLoginLink(client: Client) {
+  try {
+    const { loginToken } = await api<{ loginToken: string }>(
+      `/admin/clients/${client.id}/login-link`,
+      { method: 'POST' },
+    )
+    await copyLoginLink(loginToken)
+    toast.success('Login link copied to clipboard.')
+  } catch (error: unknown) {
+    toast.error(error instanceof Error ? error.message : 'Could not copy login link.')
+  }
 }
 
 
@@ -404,6 +418,12 @@ async function setOverride(client: Client, override: 'force_open' | 'force_locke
                     <div class="relative flex justify-end gap-2">
                       <button
                         class="saas-icon-button"
+                        aria-label="Copy login link"
+                        @click="copyClientLoginLink(client)"
+                      >
+                        <Copy class="h-4 w-4" /></button
+                      ><button
+                        class="saas-icon-button"
                         aria-label="Preview"
                         @click="navigateTo(`/x/preview/${client.id}`)"
                       >
@@ -515,6 +535,13 @@ async function setOverride(client: Client, override: 'force_open' | 'force_locke
               <div class="flex justify-between items-center pt-3 border-t border-[#edf0f4]">
                 <div></div>
                 <div class="flex gap-2 relative">
+                  <button
+                    class="saas-icon-button"
+                    aria-label="Copy login link"
+                    @click="copyClientLoginLink(client)"
+                  >
+                    <Copy class="h-4 w-4" />
+                  </button>
                   <button
                     class="saas-icon-button"
                     @click="navigateTo(`/x/preview/${client.id}`)"
